@@ -1,5 +1,5 @@
-@import "tailwindcss";
-@import "tw-animate-css";
+@import 'tailwindcss';
+@import 'tw-animate-css';
 
 @custom-variant dark (&:is(.dark *));
 
@@ -45,71 +45,57 @@
 
 :root {
   --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
-}
+  /* Figma Light Mode Colors */
+  --background: #ffffff; /* System Background */
+  --foreground: #000000; /* Label */
+  --card: #ffffff; /* System Background */
+  --card-foreground: #000000; /* Label */
+  --popover: #ffffff; /* System Background */
+  --popover-foreground: #000000; /* Label */
+  --primary: #007aff; /* Blue */
+  --primary-foreground: #ffffff; /* White for contrast */
+  --secondary: #f2f2f7; /* Secondary System Background */
+  --secondary-foreground: #000000; /* Label */
+  --muted: #f2f2f7; /* Gray (6) */
+  --muted-foreground: #8a8a8e; /* Secondary Label */
+  --accent: #e5e5ea; /* Gray (5) */
+  --accent-foreground: #000000; /* Label */
+  --destructive: #ff3b30; /* Red */
+  --border: #c6c6c8; /* Separator */
+  --input: #f2f2f7; /* Secondary System Background */
+  --ring: #007aff; /* Blue for focus */
+  --chart-1: #007aff; /* Blue */
+  --chart-2: #34c759; /* Green */
+  --chart-3: #ff9500; /* Orange */
+  --chart-4: #af52de; /* Purple */
+  --chart-5: #ff2d55; /* Pink */
+  --sidebar: #f2f2f7; /* System Grouped Background */
+  --sidebar-foreground: #000000; /* Label */
+  --sidebar-primary: #007aff; /* Blue */
+  --sidebar-primary-foreground: #ffffff; /* White for contrast */
+  --sidebar-accent: #e5e5ea; /* Gray (5) */
+  --sidebar-accent-foreground: #000000; /* Label */
+  --sidebar-border: #c6c6c8; /* Separator */
+  --sidebar-ring: #007aff; /* Blue */
 
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  /* Additional Figma System Colors */
+  --system-green: #34c759;
+  --system-orange: #ff9500;
+  --system-red: #ff3b30;
+  --system-yellow: #ffcc00;
+  --system-purple: #af52de;
+  --system-pink: #ff2d55;
+  --system-indigo: #5856d6;
+  --system-teal: #30b0c7;
+  --system-cyan: #32ade6;
+  --system-mint: #00c7be;
+  --system-brown: #a2845e;
+  --system-gray: #8e8e93;
+  --system-gray-2: #aeaeb2;
+  --system-gray-3: #c7c7cc;
+  --system-gray-4: #d1d1d6;
+  --system-gray-5: #e5e5ea;
+  --system-gray-6: #f2f2f7;
 }
 
 @layer base {
@@ -118,5 +104,339 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+/* Map Clustering Styles */
+.marker-cluster-small {
+  background-color: rgba(181, 226, 140, 0.8);
+  color: #333;
+}
+
+.marker-cluster-small div {
+  background-color: rgba(110, 204, 57, 0.8);
+  color: #333;
+}
+
+.marker-cluster-medium {
+  background-color: rgba(241, 211, 87, 0.8);
+  color: #333;
+}
+
+.marker-cluster-medium div {
+  background-color: rgba(240, 194, 12, 0.8);
+  color: #333;
+}
+
+.marker-cluster-large {
+  background-color: rgba(253, 156, 115, 0.8);
+  color: #333;
+}
+
+.marker-cluster-large div {
+  background-color: rgba(241, 128, 23, 0.8);
+  color: #333;
+}
+
+.marker-cluster {
+  background-clip: padding-box;
+  border-radius: 20px;
+}
+
+.marker-cluster div {
+  width: 30px;
+  height: 30px;
+  margin-left: 5px;
+  margin-top: 5px;
+  text-align: center;
+  border-radius: 15px;
+  font-weight: bold;
+  font-size: 12px;
+  line-height: 30px;
+}
+
+.marker-cluster span {
+  line-height: 30px;
+}
+
+/* Map marker styles */
+.marker-verified {
+  filter: drop-shadow(0 2px 4px rgba(34, 197, 94, 0.4));
+}
+
+.marker-unverified {
+  filter: drop-shadow(0 2px 4px rgba(245, 158, 11, 0.4));
+}
+
+.marker-alert {
+  filter: drop-shadow(0 2px 4px rgba(239, 68, 68, 0.6));
+  animation: pulse 2s infinite;
+}
+
+.marker-user {
+  filter: drop-shadow(0 2px 4px rgba(59, 130, 246, 0.6));
+}
+
+/* Leaflet popup customization */
+.leaflet-popup-content-wrapper {
+  border-radius: 8px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.leaflet-popup-content {
+  margin: 0;
+  line-height: 1.4;
+}
+
+.leaflet-popup-tip {
+  background: white;
+}
+
+/* Responsive map controls */
+@media (max-width: 768px) {
+  .marker-cluster div {
+    width: 25px;
+    height: 25px;
+    border-radius: 12px;
+    font-size: 11px;
+    line-height: 25px;
+  }
+
+  .marker-cluster span {
+    line-height: 25px;
+  }
+}
+
+/* Utility for text clipping */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Emergency button pulse animation */
+.emergency-pulse {
+  animation: emergency-pulse 2s infinite;
+}
+
+@keyframes emergency-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+  }
+}
+
+/* Loading spinner */
+.spinner {
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Alert card animations */
+.alert-card {
+  transition: all 0.2s ease-in-out;
+}
+
+.alert-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Distance badge styles */
+.distance-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background-color: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+}
+
+.dark .distance-badge {
+  background-color: #374151;
+  color: #d1d5db;
+  border-color: #4b5563;
+}
+
+/* Media preview styles */
+.media-preview {
+  border-radius: 6px;
+  overflow: hidden;
+  border: 2px solid #e5e7eb;
+  transition: border-color 0.2s;
+}
+
+.media-preview:hover {
+  border-color: #3b82f6;
+}
+
+/* Form validation styles */
+.form-error {
+  color: #dc2626;
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.form-success {
+  color: #16a34a;
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+/* Map control styles */
+.map-controls {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.map-control-button {
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  padding: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.map-control-button:hover {
+  background: #f5f5f5;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.25);
+}
+
+.map-control-button.active {
+  background: #3b82f6;
+  color: white;
+  border-color: #2563eb;
+}
+
+.dark .map-control-button {
+  background: #374151;
+  border-color: #4b5563;
+  color: white;
+}
+
+.dark .map-control-button:hover {
+  background: #4b5563;
+}
+
+/* Filter toggle styles */
+.filter-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.filter-toggle input[type='checkbox'] {
+  margin: 0;
+  transform: scale(0.9);
+}
+
+/* Location accuracy indicator */
+.location-accuracy {
+  border-radius: 50%;
+  border: 2px solid #3b82f6;
+  background-color: rgba(59, 130, 246, 0.1);
+  pointer-events: none;
+}
+
+/* Responsive map adjustments */
+@media (max-width: 768px) {
+  .map-controls {
+    top: 50px;
+    right: 5px;
+    flex-direction: row;
+    flex-wrap: wrap;
+    max-width: calc(100% - 10px);
+  }
+
+  .map-control-button {
+    padding: 6px;
+    font-size: 11px;
+    min-width: 32px;
+    text-align: center;
+  }
+
+  .filter-toggle {
+    font-size: 10px;
+  }
+
+  .leaflet-popup-content-wrapper {
+    max-width: 250px;
+  }
+
+  .leaflet-popup-content {
+    margin: 12px 16px;
+    font-size: 14px;
+  }
+}
+
+/* Accessibility improvements */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Focus styles for keyboard navigation */
+.map-control-button:focus,
+button:focus,
+input:focus,
+select:focus,
+textarea:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .marker-verified,
+  .marker-unverified,
+  .marker-alert,
+  .marker-user {
+    filter: contrast(1.5) drop-shadow(0 0 0 #000);
+  }
+
+  .map-control-button {
+    border-width: 2px;
+    border-color: #000;
   }
 }

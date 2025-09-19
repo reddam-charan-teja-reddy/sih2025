@@ -1,0 +1,9 @@
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M3 15c2-2 4-3 7-2s6 2 8 0l3 2c-2 3-5 4-8 3s-6-2-8 0l-2-3z" fill="#8B4513"/>
+  <path d="M5 12c2-1 4-1 6 0s4 1 6 0l2 1c-2 2-4 2-6 1s-4-1-6 1l-2-3z" fill="#A0522D"/>
+  <path d="M4 18c3-1 5-1 8 0s5 1 8 0v3c-3 1-5 1-8 0s-5-1-8 0v-3z" fill="#654321"/>
+  <circle cx="8" cy="10" r="1" fill="#8B4513"/>
+  <circle cx="12" cy="9" r="1" fill="#A0522D"/>
+  <circle cx="16" cy="10" r="1" fill="#8B4513"/>
+  <title>Landslide Warning</title>
+</svg>

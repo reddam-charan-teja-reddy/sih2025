@@ -1,0 +1,10 @@
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Shield shape -->
+  <path d="M12 2l8 3v7c0 5.25-3.5 10.25-8 11-4.5-.75-8-5.75-8-11V5l8-3z" fill="#22C55E"/>
+  <path d="M12 3l7 2.5v6.5c0 4.5-3 8.75-7 9.5-4-.75-7-5-7-9.5V5.5L12 3z" fill="#16A34A"/>
+  
+  <!-- Checkmark -->
+  <path d="M9 12l2 2 4-4" stroke="#FFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  
+  <title>Verified Badge</title>
+</svg>

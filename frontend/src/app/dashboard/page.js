@@ -24,6 +24,59 @@ import {
 export default function DashboardPage() {
   const { user, isGuest, canPerformAction } = useAuth();
 
+  // Check if user has official role access
+  const isOfficialUser =
+    user?.role === 'official' ||
+    user?.role === 'admin' ||
+    user?.role === 'responder';
+
+  // If user is not official, show access denied
+  if (isGuest || !user || !isOfficialUser) {
+    return (
+      <RouteGuard allowGuest={false}>
+        <div className='min-h-screen bg-gradient-to-br from-red-50 via-white to-orange-50'>
+          <Header />
+          <div className='container mx-auto px-4 py-16 max-w-2xl text-center'>
+            <div className='bg-white rounded-xl shadow-lg p-8 border border-red-200'>
+              <Shield className='h-16 w-16 text-red-600 mx-auto mb-4' />
+              <h1 className='text-2xl font-bold text-gray-900 mb-4'>
+                Access Restricted
+              </h1>
+              <p className='text-gray-600 mb-6'>
+                This dashboard is only available to authorized emergency
+                response personnel. Normal users cannot access official
+                emergency management features.
+              </p>
+              <div className='bg-red-50 border border-red-200 rounded-lg p-4 mb-6'>
+                <p className='text-sm text-red-800'>
+                  <strong>Required Role:</strong> Official, Admin, or Emergency
+                  Responder
+                </p>
+                {user && (
+                  <p className='text-sm text-red-700 mt-1'>
+                    <strong>Your Role:</strong> {user.role || 'Standard User'}
+                  </p>
+                )}
+              </div>
+              <div className='flex flex-col sm:flex-row gap-3 justify-center'>
+                <Button
+                  onClick={() => (window.location.href = '/')}
+                  className='bg-blue-600 hover:bg-blue-700'>
+                  Return to Home
+                </Button>
+                <Button
+                  onClick={() => (window.location.href = '/profile')}
+                  variant='outline'>
+                  View Profile
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </RouteGuard>
+    );
+  }
+
   const stats = [
     {
       title: 'Active Incidents',

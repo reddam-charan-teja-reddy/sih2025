@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAppSelector, useAppDispatch } from '@/store/hooks';
 import {
@@ -10,7 +10,41 @@ import {
   selectGuestSession,
   refreshToken,
   expireGuestSession,
+  clearAuth,
 } from '@/store/authSlice';
+
+// Auth initialization hook
+const useAuthInitialization = () => {
+  const dispatch = useAppDispatch();
+  const user = useAppSelector(selectUser);
+  const accessToken = useAppSelector((state) => state.auth.accessToken);
+  const isAuthenticated = useAppSelector(selectIsAuthenticated);
+  const isGuest = useAppSelector(selectIsGuest);
+  const [isInitializing, setIsInitializing] = useState(true);
+
+  useEffect(() => {
+    const initializeAuth = async () => {
+      try {
+        // If we have a user but no access token, try to refresh
+        if (user && !accessToken && !isGuest) {
+          console.log('User found but no access token, attempting refresh...');
+          const result = await dispatch(refreshToken()).unwrap();
+          console.log('Token refresh successful:', !!result.accessToken);
+        }
+      } catch (error) {
+        console.log('Token refresh failed, clearing auth state:', error);
+        // If refresh fails, clear the persisted user state
+        dispatch(clearAuth());
+      } finally {
+        setIsInitializing(false);
+      }
+    };
+
+    initializeAuth();
+  }, [dispatch, user, accessToken, isGuest]);
+
+  return { isInitializing };
+};
 
 // Higher-Order Component for protected routes
 export const withAuth = (WrappedComponent, options = {}) => {
@@ -171,8 +205,12 @@ export const RouteGuard = ({
   const router = useRouter();
   const dispatch = useAppDispatch();
   const { isAuthenticated, isGuest, user, isGuestExpired } = useAuth();
+  const { isInitializing } = useAuthInitialization();
 
   useEffect(() => {
+    // Don't run route checks while auth is initializing
+    if (isInitializing) return;
+
     if (isGuestExpired()) {
       dispatch(expireGuestSession());
       router.push('/auth/login');
@@ -181,12 +219,7 @@ export const RouteGuard = ({
 
     if (requireAuth) {
       if (!isAuthenticated && !isGuest) {
-        // Try refresh token first
-        dispatch(refreshToken()).then((result) => {
-          if (result.type === 'auth/refresh/rejected') {
-            router.push('/auth/login');
-          }
-        });
+        router.push('/auth/login');
         return;
       }
 
@@ -211,7 +244,22 @@ export const RouteGuard = ({
     requiredRoles,
     router,
     dispatch,
+    isInitializing,
   ]);
+
+  // Show loading while auth is initializing
+  if (isInitializing) {
+    return (
+      <div className='min-h-screen flex items-center justify-center'>
+        <div className='text-center'>
+          <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4'></div>
+          <p className='text-sm text-gray-600'>
+            Initializing authentication...
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   // Loading state while checking authentication
   if (requireAuth && !isAuthenticated && !isGuest) {

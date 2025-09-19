@@ -1,16 +1,8 @@
-// components/layout/Header.js
 'use client';
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import {
-  User,
-  LogOut,
-  Settings,
-  Shield,
-  Clock,
-  AlertTriangle,
-} from 'lucide-react';
+import { User, LogOut, Settings, Shield, Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -23,12 +15,11 @@ import {
 import { useAuth } from '@/components/auth/AuthGuards';
 import { useAppDispatch } from '@/store/hooks';
 import { logoutUser } from '@/store/authSlice';
-import { GuestModeManager } from '@/components/auth/GuestMode';
 
 export function Header() {
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const { isAuthenticated, isGuest, user, getGuestTimeRemaining } = useAuth();
+  const { isAuthenticated, isGuest, user } = useAuth();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const handleLogout = async () => {
@@ -43,164 +34,159 @@ export function Header() {
     }
   };
 
-  const handleProfileClick = () => {
-    if (isGuest) {
-      router.push('/auth/login?reason=guest_limitation');
-      return;
-    }
-    router.push('/profile');
-  };
-
-  const getDisplayName = () => {
-    if (isGuest) return 'Guest User';
-    if (user?.name) return user.name;
-    if (user?.email) return user.email;
-    if (user?.phone) return user.phone;
-    return 'User';
-  };
-
-  const getRoleDisplay = () => {
-    if (isGuest) return 'Guest';
-    if (user?.role === 'official') {
-      return user?.isOfficialVerified
-        ? 'Verified Official'
-        : 'Pending Official';
-    }
-    return 'Citizen';
-  };
-
-  const getRoleIcon = () => {
-    if (isGuest) return <Clock className='h-4 w-4' />;
-    if (user?.role === 'official') {
-      return user?.isOfficialVerified ? (
-        <Shield className='h-4 w-4 text-green-600' />
-      ) : (
-        <AlertTriangle className='h-4 w-4 text-orange-500' />
-      );
-    }
-    return <User className='h-4 w-4' />;
-  };
-
-  return (
-    <>
-      {/* Guest Mode Manager - shows countdown and warnings */}
-      {isGuest && (
-        <div className='border-b'>
-          <div className='container mx-auto px-4'>
-            <GuestModeManager />
+  if (!isAuthenticated && !isGuest) {
+    // Show simple header for unauthenticated users
+    return (
+      <header className='border-b bg-background px-4 py-3'>
+        <div className='flex items-center justify-between'>
+          <div className='flex items-center gap-3'>
+            <h1 className='text-xl font-bold text-gray-900'>
+              🚨 Emergency Hub
+            </h1>
+          </div>
+          <div className='flex items-center gap-2'>
+            <Button
+              onClick={() => router.push('/auth/login')}
+              variant='outline'>
+              Login
+            </Button>
+            <Button onClick={() => router.push('/auth/register')}>
+              Register
+            </Button>
           </div>
         </div>
-      )}
+      </header>
+    );
+  }
 
-      <header className='flex h-16 items-center justify-between border-b bg-background px-4 md:px-6'>
-        <div className='flex items-center gap-2'>
+  return (
+    <header className='border-b bg-background px-4 py-3 shadow-sm'>
+      <div className='flex items-center justify-between'>
+        {/* Logo and Title */}
+        <div className='flex items-center gap-3'>
           <button
             onClick={() => router.push('/')}
-            className='font-bold text-lg hover:text-blue-600 transition-colors'>
-            Samudra Sahayak
+            className='text-xl font-bold text-foreground hover:text-primary transition-colors'>
+            🚨 Emergency Hub
           </button>
+
           {isGuest && (
-            <span className='ml-2 px-2 py-1 text-xs bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300 rounded-full'>
+            <span className='text-xs bg-[#FF9500]/10 text-[#FF9500] px-2 py-1 rounded-full'>
               Guest Mode
             </span>
           )}
         </div>
 
-        <div className='flex items-center gap-4'>
-          {/* Authentication Status */}
-          {isAuthenticated || isGuest ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
+        {/* User Menu */}
+        <div className='flex items-center gap-3'>
+          {/* Quick Actions - Only show dashboard for official users */}
+          {!isGuest &&
+            user &&
+            (user.role === 'official' ||
+              user.role === 'admin' ||
+              user.role === 'responder') && (
+              <div className='hidden md:flex items-center gap-2'>
                 <Button
+                  onClick={() => router.push('/dashboard')}
                   variant='ghost'
-                  className='flex items-center gap-2 h-auto p-2'>
-                  <div className='flex items-center gap-2'>
-                    {getRoleIcon()}
-                    <div className='text-left'>
-                      <div className='text-sm font-medium'>
-                        {getDisplayName()}
-                      </div>
-                      <div className='text-xs text-muted-foreground'>
-                        {getRoleDisplay()}
-                      </div>
-                    </div>
-                  </div>
+                  size='sm'
+                  className='text-muted-foreground hover:text-foreground'>
+                  Dashboard
                 </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align='end' className='w-56'>
-                <DropdownMenuLabel>
-                  <div className='flex flex-col space-y-1'>
-                    <p className='text-sm font-medium leading-none'>
-                      {getDisplayName()}
+              </div>
+            )}
+
+          {/* User Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant='ghost'
+                className='flex items-center gap-2 px-3 py-2'>
+                <div className='h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center'>
+                  <User className='h-4 w-4 text-primary' />
+                </div>
+                <span className='hidden md:block text-sm font-medium'>
+                  {isGuest
+                    ? 'Guest User'
+                    : user?.fullName || user?.email || 'User'}
+                </span>
+              </Button>
+            </DropdownMenuTrigger>
+
+            <DropdownMenuContent align='end' className='w-56'>
+              <DropdownMenuLabel>
+                <div className='flex flex-col space-y-1'>
+                  <p className='text-sm font-medium'>
+                    {isGuest ? 'Guest User' : user?.fullName || 'User'}
+                  </p>
+                  {!isGuest && user?.email && (
+                    <p className='text-xs text-muted-foreground'>
+                      {user.email}
                     </p>
-                    <p className='text-xs leading-none text-muted-foreground'>
-                      {getRoleDisplay()}
-                    </p>
-                    {isGuest && (
-                      <p className='text-xs text-orange-600 dark:text-orange-400'>
-                        {Math.floor(getGuestTimeRemaining() / 60)}:
-                        {(getGuestTimeRemaining() % 60)
-                          .toString()
-                          .padStart(2, '0')}{' '}
-                        remaining
-                      </p>
-                    )}
-                  </div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
+                  )}
+                  {user?.role && (
+                    <div className='flex items-center gap-1'>
+                      <Shield className='h-3 w-3' />
+                      <span className='text-xs text-blue-600 capitalize'>
+                        {user.role}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </DropdownMenuLabel>
 
-                {!isGuest && (
-                  <>
-                    <DropdownMenuItem onClick={handleProfileClick}>
-                      <User className='mr-2 h-4 w-4' />
-                      <span>Profile</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => router.push('/settings')}>
-                      <Settings className='mr-2 h-4 w-4' />
-                      <span>Settings</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                  </>
-                )}
+              <DropdownMenuSeparator />
 
-                {isGuest && (
-                  <>
-                    <DropdownMenuItem
-                      onClick={() => router.push('/auth/login')}>
-                      <User className='mr-2 h-4 w-4' />
-                      <span>Sign In</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => router.push('/auth/register')}>
-                      <Settings className='mr-2 h-4 w-4' />
-                      <span>Create Account</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                  </>
-                )}
+              {!isGuest && (
+                <>
+                  <DropdownMenuItem onClick={() => router.push('/profile')}>
+                    <User className='mr-2 h-4 w-4' />
+                    Profile
+                  </DropdownMenuItem>
 
+                  <DropdownMenuItem onClick={() => router.push('/settings')}>
+                    <Settings className='mr-2 h-4 w-4' />
+                    Settings
+                  </DropdownMenuItem>
+
+                  {/* Only show dashboard for official users */}
+                  {(user?.role === 'official' ||
+                    user?.role === 'admin' ||
+                    user?.role === 'responder') && (
+                    <DropdownMenuItem onClick={() => router.push('/dashboard')}>
+                      <Shield className='mr-2 h-4 w-4' />
+                      Dashboard
+                    </DropdownMenuItem>
+                  )}
+
+                  <DropdownMenuSeparator />
+                </>
+              )}
+
+              {isGuest ? (
+                <>
+                  <DropdownMenuItem onClick={() => router.push('/auth/login')}>
+                    <User className='mr-2 h-4 w-4' />
+                    Login
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => router.push('/auth/register')}>
+                    <User className='mr-2 h-4 w-4' />
+                    Register
+                  </DropdownMenuItem>
+                </>
+              ) : (
                 <DropdownMenuItem
                   onClick={handleLogout}
                   disabled={isLoggingOut}>
                   <LogOut className='mr-2 h-4 w-4' />
-                  <span>{isGuest ? 'Exit Guest Mode' : 'Sign Out'}</span>
+                  {isLoggingOut ? 'Signing out...' : 'Sign out'}
                 </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : (
-            <div className='flex items-center gap-2'>
-              <Button
-                variant='ghost'
-                onClick={() => router.push('/auth/login')}>
-                Sign In
-              </Button>
-              <Button onClick={() => router.push('/auth/register')}>
-                Get Started
-              </Button>
-            </div>
-          )}
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
-      </header>
-    </>
+      </div>
+    </header>
   );
 }

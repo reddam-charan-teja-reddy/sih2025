@@ -97,9 +97,58 @@ const UserSchema = new mongoose.Schema(
       default: 'en',
       enum: ['en', 'te', 'hi'],
     },
+    profession: {
+      type: String,
+      trim: true,
+      enum: [
+        'citizen',
+        'tourist',
+        'fisherman',
+        'marine_officer',
+        'coast_guard',
+        'emergency_responder',
+        'port_authority',
+        'environmental_officer',
+        'safety_inspector',
+        'rescue_team',
+        'other',
+      ],
+      default: 'citizen',
+    },
+    notificationPreferences: {
+      push: {
+        type: Boolean,
+        default: true,
+      },
+      email: {
+        type: Boolean,
+        default: true,
+      },
+      sms: {
+        type: Boolean,
+        default: false,
+      },
+      emergencyAlerts: {
+        type: Boolean,
+        default: true,
+      },
+      reportUpdates: {
+        type: Boolean,
+        default: true,
+      },
+      language: {
+        type: String,
+        enum: ['en', 'te', 'hi'],
+        default: 'en',
+      },
+    },
     location: {
       latitude: Number,
       longitude: Number,
+    },
+    settings: {
+      type: Object,
+      default: {},
     },
   },
   {

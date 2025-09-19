@@ -18,7 +18,7 @@ export const authMiddleware = async (request) => {
     const token = authHeader?.replace('Bearer ', '');
 
     if (!token) {
-      return { error: 'Access token required', status: 401 };
+      return { success: false, error: 'Access token required', status: 401 };
     }
 
     const decoded = await verifyToken(token);
@@ -27,16 +27,20 @@ export const authMiddleware = async (request) => {
     const user = await User.findById(decoded.id);
 
     if (!user) {
-      return { error: 'User not found', status: 401 };
+      return { success: false, error: 'User not found', status: 401 };
     }
 
     if (!user.isVerified) {
-      return { error: 'Please verify your account', status: 403 };
+      return {
+        success: false,
+        error: 'Please verify your account',
+        status: 403,
+      };
     }
 
-    return { user, decoded };
+    return { success: true, user, decoded };
   } catch (error) {
-    return { error: 'Invalid or expired token', status: 401 };
+    return { success: false, error: 'Invalid or expired token', status: 401 };
   }
 };
 

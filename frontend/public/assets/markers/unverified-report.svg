@@ -1,0 +1,15 @@
+<svg width="32" height="40" viewBox="0 0 32 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Marker body -->
+  <path d="M16 0C7.163 0 0 7.163 0 16c0 8.836 16 24 16 24s16-15.164 16-24C32 7.163 24.837 0 16 0z" fill="#F59E0B"/>
+  <circle cx="16" cy="16" r="8" fill="#FFF"/>
+  
+  <!-- Clock icon -->
+  <circle cx="16" cy="16" r="5" stroke="#F59E0B" stroke-width="2" fill="none"/>
+  <path d="M16 13v3l2 2" stroke="#F59E0B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  
+  <!-- Pending badge -->
+  <circle cx="24" cy="8" r="6" fill="#F59E0B"/>
+  <circle cx="24" cy="8" r="2" fill="#FFF"/>
+  
+  <title>Unverified Report</title>
+</svg>
