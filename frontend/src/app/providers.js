@@ -1,5 +1,7 @@
 'use client';
 
+import { Provider } from 'react-redux';
+import { PersistGate } from 'redux-persist/integration/react';
 import { store, persistor } from '@/store/store';
 
 // Loading component shown during persistence rehydration
@@ -14,7 +16,9 @@ const PersistenceLoading = () => (
 export function Providers({ children }) {
   return (
     <Provider store={store}>
-          {children}
+      <PersistGate loading={<PersistenceLoading />} persistor={persistor}>
+        {children}
+      </PersistGate>
     </Provider>
   );
 }
