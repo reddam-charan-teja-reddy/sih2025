@@ -16,7 +16,7 @@ import { useAuth } from '@/components/auth/AuthGuards';
 import { useAppDispatch } from '@/store/hooks';
 import { logoutUser } from '@/store/authSlice';
 
-export function Header() {
+export default function Header() {
   const router = useRouter();
   const dispatch = useAppDispatch();
   const { isAuthenticated, isGuest, user } = useAuth();

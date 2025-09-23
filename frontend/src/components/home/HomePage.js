@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { AlertsFeed } from '@/components/home/AlertsFeed';
 import { ReportModal } from '@/components/home/ReportModal';
-import { Header } from '@/components/layout/Header';
+import Header from '@/components/layout/Header';
 import { RouteGuard, useAuth } from '@/components/auth/AuthGuards';
 import { GuestLimitations } from '@/components/auth/GuestMode';
 import { Button } from '@/components/ui/button';

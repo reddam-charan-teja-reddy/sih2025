@@ -1,7 +1,7 @@
 'use client';
 
 import { RouteGuard, useAuth } from '@/components/auth/AuthGuards';
-import { Header } from '@/components/layout/Header';
+import Header from '@/components/layout/Header';
 import {
   Card,
   CardContent,
