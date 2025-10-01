@@ -162,7 +162,7 @@ export default function DashboardPage() {
                 </h1>
                 <p className='text-gray-600 dark:text-gray-400'>
                   {isGuest
-                    ? 'You are viewing in guest mode with limited access.'
+                    ? 'You are viewing in guest mode. Core features are available during this session.'
                     : 'Monitor and respond to emergencies in your area.'}
                 </p>
               </div>

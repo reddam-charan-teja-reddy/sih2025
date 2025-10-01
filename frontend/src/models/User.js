@@ -18,7 +18,7 @@ const UserSchema = new mongoose.Schema(
     },
     phone: {
       type: String,
-      required: [true, 'Phone number is required'],
+      required: false, // Made optional temporarily
       trim: true,
       match: [/^\+?[1-9]\d{1,14}$/, 'Please provide a valid phone number'],
     },
@@ -176,8 +176,25 @@ UserSchema.pre('save', async function (next) {
 
 // Method to compare passwords
 UserSchema.methods.comparePassword = async function (candidatePassword) {
-  if (!this.password) return false;
-  return await bcryptjs.compare(candidatePassword, this.password);
+  console.log('🔑 comparePassword called:', {
+    hasStoredPassword: !!this.password,
+    candidatePasswordLength: candidatePassword?.length,
+    storedPasswordLength: this.password?.length,
+  });
+
+  if (!this.password) {
+    console.log('❌ No stored password found');
+    return false;
+  }
+
+  try {
+    const result = await bcryptjs.compare(candidatePassword, this.password);
+    console.log('🔑 bcrypt compare result:', result);
+    return result;
+  } catch (error) {
+    console.error('❌ Error during password comparison:', error);
+    return false;
+  }
 };
 
 // Method to increment login attempts
@@ -210,13 +227,15 @@ UserSchema.methods.resetLoginAttempts = function () {
 // Method to generate verification token
 UserSchema.methods.generateVerificationToken = function () {
   const crypto = require('crypto');
-  const token = crypto.randomBytes(32).toString('hex');
-  const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+  // Generate a 6-digit verification code
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  const hashedToken = crypto.createHash('sha256').update(code).digest('hex');
 
   this.verificationToken = hashedToken;
   this.verificationTokenExpires = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
 
-  return token; // Return unhashed token to send to user
+  return code; // Return the 6-digit code to send to user
 };
 
 // Method to generate password reset token
@@ -234,40 +253,83 @@ UserSchema.methods.generatePasswordResetToken = function () {
 // Static method to find user by credentials
 UserSchema.statics.findByCredentials = async function (credential, password) {
   const isEmail = credential.includes('@');
-  const query = isEmail ? { email: credential } : { phone: credential };
+  let query;
+
+  if (isEmail) {
+    query = { email: credential };
+  } else {
+    // For phone numbers, try multiple formats to handle normalization inconsistencies
+    const cleanPhone = credential.replace(/[\s\-\(\)]/g, '');
+    const phoneWithPlus = cleanPhone.startsWith('+')
+      ? cleanPhone
+      : `+${cleanPhone}`;
+    const phoneWithoutPlus = cleanPhone.startsWith('+')
+      ? cleanPhone.substring(1)
+      : cleanPhone;
+
+    query = {
+      $or: [
+        { phone: credential }, // Original format
+        { phone: cleanPhone }, // Cleaned format
+        { phone: phoneWithPlus }, // With + prefix
+        { phone: phoneWithoutPlus }, // Without + prefix
+      ],
+    };
+  }
+
+  console.log('🔍 User.findByCredentials called with:', {
+    credential,
+    isEmail,
+    query,
+  });
 
   const user = await this.findOne(query).select(
     '+password +loginAttempts +lockUntil'
   );
 
+  console.log('🔍 Database search result:', {
+    found: !!user,
+    userId: user?._id,
+    userEmail: user?.email,
+    userPhone: user?.phone,
+    hasPassword: !!user?.password,
+  });
+
   if (!user) {
+    console.log('❌ No user found with query:', query);
     return null;
   }
 
   if (user.isLocked) {
+    console.log('🔒 User account is locked:', user._id);
     await user.incLoginAttempts();
     throw new Error(
       'Account temporarily locked due to too many failed login attempts'
     );
   }
 
+  console.log('🔑 Comparing password for user:', user._id);
   const isMatch = await user.comparePassword(password);
+  console.log('🔑 Password comparison result:', { isMatch });
 
   if (!isMatch) {
+    console.log('❌ Password mismatch for user:', user._id);
     await user.incLoginAttempts();
     return null;
   }
 
   if (user.loginAttempts > 0) {
+    console.log('✅ Resetting login attempts for user:', user._id);
     await user.resetLoginAttempts();
   }
 
+  console.log('✅ Login successful for user:', user._id);
   return user;
 };
 
 // Indexes for performance
 UserSchema.index({ email: 1 }, { unique: true });
-UserSchema.index({ phone: 1 }, { unique: true });
+UserSchema.index({ phone: 1 }, { unique: true, sparse: true }); // sparse allows multiple null values
 UserSchema.index({ verificationToken: 1 });
 UserSchema.index({ passwordResetToken: 1 });
 

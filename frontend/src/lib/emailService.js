@@ -27,12 +27,17 @@ const createTransporter = () => {
 // Verify email configuration
 export const verifyEmailConfig = async () => {
   try {
+    console.log('🔍 Verifying email configuration...');
     const transporter = createTransporter();
     await transporter.verify();
-    console.log('Email configuration verified successfully');
+    console.log('✅ Email configuration verified successfully');
     return true;
   } catch (error) {
-    console.error('Email configuration error:', error);
+    console.error('❌ Email configuration error:', {
+      message: error.message,
+      code: error.code,
+      stack: error.stack,
+    });
     return false;
   }
 };
@@ -40,13 +45,11 @@ export const verifyEmailConfig = async () => {
 // Send verification email
 export const sendVerificationEmail = async (
   email,
-  verificationToken,
+  verificationCode,
   userFullName
 ) => {
   try {
     const transporter = createTransporter();
-
-    const verificationUrl = `${process.env.FRONTEND_URL}/auth/verify?token=${verificationToken}`;
 
     const mailOptions = {
       from: {
@@ -84,18 +87,18 @@ export const sendVerificationEmail = async (
               border-radius: 0 0 10px 10px;
               border: 1px solid #e2e8f0;
             }
-            .button {
-              display: inline-block;
+            .verification-code {
               background: #3b82f6;
               color: white;
-              padding: 12px 30px;
-              text-decoration: none;
-              border-radius: 6px;
+              font-size: 32px;
               font-weight: bold;
+              padding: 20px;
+              text-align: center;
+              border-radius: 8px;
+              letter-spacing: 8px;
               margin: 20px 0;
-            }
-            .button:hover {
-              background: #2563eb;
+              font-family: monospace;
+              position: relative;
             }
             .footer {
               text-align: center;
@@ -131,19 +134,17 @@ export const sendVerificationEmail = async (
             
             <p>Thank you for joining Samudra Sahayak, the community-driven platform for coastal emergency management and ocean hazard reporting.</p>
             
-            <p>To complete your registration and start helping make coastal communities safer, please verify your email address by clicking the button below:</p>
+            <p>To complete your registration and start helping make coastal communities safer, please enter this verification code in the app:</p>
             
-            <div style="text-align: center;">
-              <a href="${verificationUrl}" class="button">Verify My Account</a>
+            <div class="verification-code">
+              <div style="font-size: 36px; font-weight: bold; text-align: center; letter-spacing: 8px; margin: 10px 0; font-family: monospace; background: #3b82f6; color: white; padding: 20px; border-radius: 8px;">${verificationCode}</div>
+              <p style="text-align: center; margin-top: 10px; font-size: 14px; color: #666;">
+                📋 <strong>Tip:</strong> Select the code above and copy it (Ctrl+C / Cmd+C)
+              </p>
             </div>
             
-            <p>Or copy and paste this link into your browser:</p>
-            <p style="word-break: break-all; background: #e2e8f0; padding: 10px; border-radius: 4px; font-family: monospace;">
-              ${verificationUrl}
-            </p>
-            
             <div class="security-note">
-              <strong>🔐 Security Note:</strong> This verification link will expire in 24 hours for your security. If you didn't create this account, please ignore this email.
+              <strong>🔐 Security Note:</strong> This verification code will expire in 24 hours for your security. If you didn't create this account, please ignore this email.
             </div>
             
             <h3>What you can do with Samudra Sahayak:</h3>
@@ -174,11 +175,11 @@ export const sendVerificationEmail = async (
         
         Hello ${userFullName}!
         
-        Thank you for joining Samudra Sahayak. To complete your registration, please verify your email address by visiting:
+        Thank you for joining Samudra Sahayak. To complete your registration, please enter this verification code in the app:
         
-        ${verificationUrl}
+        Verification Code: ${verificationCode}
         
-        This link will expire in 24 hours for security reasons.
+        This code will expire in 24 hours for security reasons.
         
         If you didn't create this account, please ignore this email.
         
@@ -203,7 +204,27 @@ export const sendPasswordResetEmail = async (
   userFullName
 ) => {
   try {
+    console.log('📧 Starting password reset email send process:', {
+      email: email.substring(0, 5) + '***',
+      userFullName,
+      tokenLength: resetToken?.length,
+    });
+
     const transporter = createTransporter();
+
+    // Verify transporter before sending
+    console.log('🔍 Verifying transporter before sending...');
+    try {
+      await transporter.verify();
+      console.log('✅ Transporter verification successful');
+    } catch (verifyError) {
+      console.error('❌ Transporter verification failed:', verifyError);
+      return {
+        success: false,
+        error:
+          'Email configuration verification failed: ' + verifyError.message,
+      };
+    }
 
     const mailOptions = {
       from: {
@@ -314,11 +335,25 @@ export const sendPasswordResetEmail = async (
       `,
     };
 
+    console.log('📧 Sending email with options:', {
+      from: mailOptions.from,
+      to: mailOptions.to,
+      subject: mailOptions.subject,
+      htmlLength: mailOptions.html.length,
+    });
+
     const info = await transporter.sendMail(mailOptions);
-    console.log('Password reset email sent successfully:', info.messageId);
+    console.log('✅ Password reset email sent successfully:', {
+      messageId: info.messageId,
+      response: info.response,
+    });
     return { success: true, messageId: info.messageId };
   } catch (error) {
-    console.error('Error sending password reset email:', error);
+    console.error('❌ Error sending password reset email:', {
+      message: error.message,
+      code: error.code,
+      stack: error.stack,
+    });
     return { success: false, error: error.message };
   }
 };

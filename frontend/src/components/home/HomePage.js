@@ -97,11 +97,11 @@ export default function HomePage() {
 
   return (
     <RouteGuard allowGuest={true}>
-      <div className='min-h-screen bg-background'>
+      <div className='h-screen flex flex-col bg-background'>
         <Header />
 
         {/* Status Bar - Enhanced design */}
-        <div className='bg-card/90 backdrop-blur-md border-b border-border px-4 py-3 shadow-sm'>
+        <div className='bg-card/90 backdrop-blur-md border-b border-border px-4 py-3 shadow-sm flex-shrink-0'>
           <div className='max-w-7xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3'>
             <div className='flex items-center gap-4'>
               <Badge
@@ -161,26 +161,19 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Guest Banner */}
-        {isGuest && (
-          <div className='bg-status-warning/10 border-b border-status-warning/20 px-4 py-3'>
-            <div className='max-w-7xl mx-auto'>
-              <GuestLimitations />
-            </div>
-          </div>
-        )}
+        {/* Guest Banner removed: no empty padding when GuestLimitations is null */}
 
-        {/* Main Layout - Fixed proportions with specific height */}
-        <div className='flex flex-col lg:flex-row h-[calc(100vh-160px)] overflow-hidden'>
+        {/* Main Layout - Full remaining height */}
+        <div className='flex-1 flex flex-col lg:flex-row overflow-hidden'>
           {/* Map Section - Better visibility for desktop */}
-          <div className='h-[400px] lg:h-full w-full lg:w-2/3 relative bg-background border-r border-border shadow-md'>
+          <div className='h-[50vh] lg:h-full w-full lg:w-2/3 relative bg-background border-r border-border shadow-md'>
             <MapView />
           </div>
 
-          {/* Alerts Section - Fixed height */}
-          <div className='h-[calc(100vh-560px)] lg:h-full w-full lg:w-1/3 flex flex-col bg-card'>
+          {/* Alerts Section - Full remaining height */}
+          <div className='h-[50vh] lg:h-full w-full lg:w-1/3 flex flex-col bg-card'>
             {/* Action Bar - Properly aligned */}
-            <div className='p-4 border-b border-border bg-muted/50'>
+            <div className='p-4 border-b border-border bg-muted/50 flex-shrink-0'>
               <div className='flex flex-col gap-3'>
                 {/* Primary Action - Report Button */}
 
@@ -194,7 +187,7 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* Alerts Feed */}
+            {/* Alerts Feed - Takes remaining space */}
             <div className='flex-1 overflow-hidden bg-background'>
               <AlertsFeed />
             </div>

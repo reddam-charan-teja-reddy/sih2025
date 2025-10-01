@@ -108,8 +108,8 @@ export const validateRegistrationData = (data) => {
     errors.email = 'Please enter a valid email address';
   }
 
-  // Phone validation
-  if (!data.phone || !validatePhone(data.phone)) {
+  // Phone validation (optional)
+  if (data.phone && !validatePhone(data.phone)) {
     errors.phone = 'Please enter a valid phone number';
   }
 

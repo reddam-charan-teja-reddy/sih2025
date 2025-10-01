@@ -1,35 +1,39 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/db';
 import User from '@/models/User';
-import { verifyToken } from '@/lib/auth';
+import { verifyToken, guestMiddleware } from '@/lib/auth';
 
 export async function GET(request) {
   try {
     await dbConnect();
 
-    // Get the authorization header
+    // Allow guest session as citizen-equivalent read-only profile
+    const guestAuth = await guestMiddleware(request);
+    if (guestAuth.error) {
+      return NextResponse.json(
+        { error: guestAuth.error },
+        { status: guestAuth.status }
+      );
+    }
+
+    if (guestAuth.isGuest) {
+      return NextResponse.json({
+        user: {
+          id: null,
+          fullName: 'Guest User',
+          role: 'citizen',
+          isVerified: false,
+        },
+        message: 'Guest profile',
+      });
+    }
+
+    // Authenticated user profile
     const authHeader = request.headers.get('authorization');
     const token = authHeader?.startsWith('Bearer ')
       ? authHeader.slice(7)
       : request.cookies.get('token')?.value;
-
-    if (!token) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      );
-    }
-
-    // Verify the token
     const decoded = verifyToken(token);
-    if (!decoded || !decoded.userId) {
-      return NextResponse.json(
-        { error: 'Invalid authentication token' },
-        { status: 401 }
-      );
-    }
-
-    // Find the user
     const user = await User.findById(decoded.userId)
       .select('-password -refreshTokens')
       .lean();
@@ -55,27 +59,20 @@ export async function PUT(request) {
   try {
     await dbConnect();
 
-    // Get the authorization header
+    // Guests should not update persistent profile; allow only authenticated users
+    const guestAuth = await guestMiddleware(request);
+    if (guestAuth.isGuest) {
+      return NextResponse.json(
+        { error: 'Guest profile cannot be updated. Please sign in.' },
+        { status: 403 }
+      );
+    }
+
     const authHeader = request.headers.get('authorization');
     const token = authHeader?.startsWith('Bearer ')
       ? authHeader.slice(7)
       : request.cookies.get('token')?.value;
-
-    if (!token) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      );
-    }
-
-    // Verify the token
     const decoded = verifyToken(token);
-    if (!decoded || !decoded.userId) {
-      return NextResponse.json(
-        { error: 'Invalid authentication token' },
-        { status: 401 }
-      );
-    }
 
     // Parse the request body
     const body = await request.json();

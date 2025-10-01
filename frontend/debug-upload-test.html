@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Upload Debug Test</title>
+  </head>
+  <body>
+    <h1>File Upload Debug Test</h1>
+
+    <div>
+      <h3>Image Upload Test</h3>
+      <input type="file" id="imageInput" accept="image/*" />
+      <button onclick="testImageUpload()">Test Image Upload</button>
+    </div>
+
+    <div>
+      <h3>Combined Upload Test</h3>
+      <input type="file" id="combinedImageInput" accept="image/*" />
+      <button onclick="startAudioRecording()">Start Audio Recording</button>
+      <button onclick="stopAudioRecording()">Stop Audio Recording</button>
+      <button onclick="testCombinedUpload()">Test Combined Upload</button>
+    </div>
+
+    <div>
+      <h3>Results</h3>
+      <pre id="results"></pre>
+    </div>
+
+    <script>
+      let audioBlob = null;
+      let mediaRecorder = null;
+
+      function log(message) {
+        const results = document.getElementById('results');
+        results.textContent += new Date().toISOString() + ': ' + message + '\n';
+        console.log(message);
+      }
+
+      async function getAuthHeaders() {
+        // You'll need to get this from your app's localStorage or cookies
+        const token = localStorage.getItem('accessToken');
+        return {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        };
+      }
+
+      async function uploadFile(file, category) {
+        try {
+          log(
+            `Starting upload of ${file.name} (${file.type}, ${file.size} bytes)`
+          );
+
+          // Get signed URL
+          const urlResponse = await fetch('/api/upload/signed-url', {
+            method: 'POST',
+            headers: await getAuthHeaders(),
+            body: JSON.stringify({
+              fileName: file.name,
+              contentType: file.type,
+              fileSize: file.size,
+              fileCategory: category,
+            }),
+          });
+
+          if (!urlResponse.ok) {
+            const errorText = await urlResponse.text();
+            throw new Error(`Failed to get upload URL: ${errorText}`);
+          }
+
+          const { uploadUrl, downloadUrl, fileName, requiredHeaders } =
+            await urlResponse.json();
+          log(`Got signed URL for ${file.name}`);
+
+          // Upload file
+          const uploadResponse = await fetch(uploadUrl, {
+            method: 'PUT',
+            body: file,
+            headers: requiredHeaders || { 'Content-Type': file.type },
+          });
+
+          if (!uploadResponse.ok) {
+            const errorText = await uploadResponse.text();
+            throw new Error(
+              `Upload failed: ${uploadResponse.status} ${errorText}`
+            );
+          }
+
+          log(`✅ Successfully uploaded ${file.name} -> ${downloadUrl}`);
+          return { url: downloadUrl, fileName };
+        } catch (error) {
+          log(`❌ Failed to upload ${file.name}: ${error.message}`);
+          throw error;
+        }
+      }
+
+      async function testImageUpload() {
+        const input = document.getElementById('imageInput');
+        if (!input.files.length) {
+          log('Please select an image file first');
+          return;
+        }
+
+        const file = input.files[0];
+        try {
+          await uploadFile(file, 'images');
+        } catch (error) {
+          log(`Image upload test failed: ${error.message}`);
+        }
+      }
+
+      async function startAudioRecording() {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            audio: true,
+          });
+          mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+
+          const chunks = [];
+          mediaRecorder.ondataavailable = (e) => {
+            if (e.data.size > 0) chunks.push(e.data);
+          };
+
+          mediaRecorder.onstop = () => {
+            audioBlob = new Blob(chunks, { type: 'audio/webm' });
+            log(`Audio recorded: ${audioBlob.size} bytes`);
+          };
+
+          mediaRecorder.start();
+          log('Audio recording started...');
+        } catch (error) {
+          log(`Failed to start audio recording: ${error.message}`);
+        }
+      }
+
+      function stopAudioRecording() {
+        if (mediaRecorder) {
+          mediaRecorder.stop();
+          mediaRecorder.stream.getTracks().forEach((track) => track.stop());
+          log('Audio recording stopped');
+        }
+      }
+
+      async function testCombinedUpload() {
+        const input = document.getElementById('combinedImageInput');
+        if (!input.files.length) {
+          log('Please select an image file first');
+          return;
+        }
+
+        if (!audioBlob) {
+          log('Please record audio first');
+          return;
+        }
+
+        log('=== COMBINED UPLOAD TEST START ===');
+
+        const imageFile = input.files[0];
+        const audioFile = new File(
+          [audioBlob],
+          `test-audio-${Date.now()}.webm`,
+          { type: 'audio/webm' }
+        );
+
+        try {
+          // Upload both files
+          log('Uploading image...');
+          const imageResult = await uploadFile(imageFile, 'images');
+
+          log('Uploading audio...');
+          const audioResult = await uploadFile(audioFile, 'audio');
+
+          log('=== BOTH UPLOADS SUCCESSFUL ===');
+          log(`Image: ${imageResult.url}`);
+          log(`Audio: ${audioResult.url}`);
+        } catch (error) {
+          log(`Combined upload test failed: ${error.message}`);
+        }
+      }
+    </script>
+  </body>
+</html>

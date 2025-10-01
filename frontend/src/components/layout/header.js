@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/components/auth/AuthGuards';
 import { useAppDispatch } from '@/store/hooks';
-import { logoutUser } from '@/store/authSlice';
+import { logoutUser, clearAuth } from '@/store/authSlice';
 
 export default function Header() {
   const router = useRouter();
@@ -25,13 +25,35 @@ export default function Header() {
   const handleLogout = async () => {
     setIsLoggingOut(true);
     try {
-      await dispatch(logoutUser(user?.id)).unwrap();
-      router.push('/');
+      if (isGuest) {
+        // For guest users, just clear the local state
+        dispatch(clearAuth());
+        router.push('/');
+      } else {
+        // For regular users, call the logout API
+        await dispatch(logoutUser(user?.id)).unwrap();
+        router.push('/');
+      }
     } catch (error) {
       console.error('Logout failed:', error);
+      // If API logout fails, still clear local state
+      dispatch(clearAuth());
+      router.push('/');
     } finally {
       setIsLoggingOut(false);
     }
+  };
+
+  const handleGuestLogin = () => {
+    // Clear guest state and go to login
+    dispatch(clearAuth());
+    router.push('/auth/login');
+  };
+
+  const handleGuestRegister = () => {
+    // Clear guest state and go to register
+    dispatch(clearAuth());
+    router.push('/auth/register');
   };
 
   if (!isAuthenticated && !isGuest) {
@@ -165,14 +187,20 @@ export default function Header() {
 
               {isGuest ? (
                 <>
-                  <DropdownMenuItem onClick={() => router.push('/auth/login')}>
+                  <DropdownMenuItem onClick={handleGuestLogin}>
                     <User className='mr-2 h-4 w-4' />
-                    Login
+                    Login (Exit Guest Mode)
                   </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => router.push('/auth/register')}>
+                  <DropdownMenuItem onClick={handleGuestRegister}>
                     <User className='mr-2 h-4 w-4' />
-                    Register
+                    Register (Exit Guest Mode)
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={handleLogout}
+                    disabled={isLoggingOut}>
+                    <LogOut className='mr-2 h-4 w-4' />
+                    {isLoggingOut ? 'Exiting...' : 'Exit Guest Mode'}
                   </DropdownMenuItem>
                 </>
               ) : (

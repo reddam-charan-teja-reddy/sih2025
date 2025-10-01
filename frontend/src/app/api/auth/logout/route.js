@@ -35,6 +35,15 @@ export async function POST(request) {
       path: '/',
     });
 
+    // Also clear guest token cookie if present
+    response.cookies.set('guestToken', '', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 0,
+      path: '/',
+    });
+
     return response;
   } catch (error) {
     console.error('Logout error:', error);

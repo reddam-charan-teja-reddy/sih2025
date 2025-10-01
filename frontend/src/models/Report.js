@@ -17,10 +17,11 @@ const ReportSchema = new mongoose.Schema(
     },
 
     // Reporter Information
+    // Reporter can be a registered user or a guest session
     reportedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      required: [true, 'Reporter ID is required'],
+      required: false,
     },
     reporterName: {
       type: String,
@@ -142,6 +143,29 @@ const ReportSchema = new mongoose.Schema(
         },
       },
     ],
+    audio: [
+      {
+        url: {
+          type: String,
+          required: true,
+        },
+        fileName: {
+          type: String,
+          required: true,
+        },
+        duration: {
+          type: Number, // in seconds
+        },
+        transcript: {
+          type: String,
+          maxlength: [4000, 'Transcript cannot exceed 4000 characters'],
+        },
+        uploadedAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
 
     // Status and Verification
     status: {
@@ -229,7 +253,7 @@ const ReportSchema = new mongoose.Schema(
         updatedBy: {
           type: mongoose.Schema.Types.ObjectId,
           ref: 'User',
-          required: true,
+          required: false,
         },
         updateType: {
           type: String,

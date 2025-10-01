@@ -33,7 +33,16 @@ export async function POST(request) {
 
     // Validate credential format
     const credentialValidation = validateCredential(credential);
+    console.log('🔍 Credential validation result:', {
+      input: credential,
+      validation: credentialValidation,
+    });
+
     if (!credentialValidation.isValid) {
+      console.log(
+        '❌ Credential validation failed:',
+        credentialValidation.error
+      );
       return NextResponse.json(
         { error: credentialValidation.error },
         { status: 400 }
@@ -42,6 +51,12 @@ export async function POST(request) {
 
     await connectDB();
 
+    console.log('🔑 Attempting to find user with:', {
+      type: credentialValidation.type,
+      value: credentialValidation.value,
+      originalInput: credential,
+    });
+
     // Find user by credentials and verify password
     const user = await User.findByCredentials(
       credentialValidation.value,
@@ -49,6 +64,11 @@ export async function POST(request) {
     );
 
     if (!user) {
+      console.log('❌ User not found or password mismatch for:', {
+        credential: credentialValidation.value,
+        type: credentialValidation.type,
+      });
+
       return NextResponse.json(
         { error: 'Invalid credentials' },
         { status: 401 }
@@ -82,27 +102,40 @@ export async function POST(request) {
     // Generate tokens
     const { accessToken, refreshToken } = generateTokens(user);
 
-    // Save refresh token to user document
-    user.refreshTokens.push({
-      token: refreshToken,
-      createdAt: new Date(),
-    });
+    // Use atomic update to prevent version conflicts
+    const updateResult = await User.findByIdAndUpdate(
+      user._id,
+      {
+        $push: {
+          refreshTokens: {
+            $each: [
+              {
+                token: refreshToken,
+                createdAt: new Date(),
+              },
+            ],
+            $slice: -5, // Keep only last 5 tokens
+          },
+        },
+        $set: { lastLogin: new Date() },
+      },
+      { new: true, runValidators: true }
+    );
 
-    // Limit refresh tokens (keep only last 5)
-    if (user.refreshTokens.length > 5) {
-      user.refreshTokens = user.refreshTokens.slice(-5);
+    if (!updateResult) {
+      console.log('Failed to update user login data');
+      return NextResponse.json(
+        { message: 'Login failed, please try again' },
+        { status: 500 }
+      );
     }
-
-    // Update last login
-    user.lastLogin = new Date();
-    await user.save();
 
     // Prepare response
     const responseData = {
       message: 'Login successful',
       user: {
-        id: user._id,
-        fullName: user.fullName,
+        id: updateResult._id,
+        fullName: updateResult.fullName,
         email: user.email,
         phone: user.phone,
         role: user.role,
@@ -122,17 +155,33 @@ export async function POST(request) {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
-      maxAge: rememberDevice ? 7 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000, // 7 days or 1 day
+      maxAge: rememberDevice
+        ? 30 * 24 * 60 * 60 * 1000
+        : 7 * 24 * 60 * 60 * 1000, // 30 days or 7 days
       path: '/',
     };
 
     response.cookies.set('refreshToken', refreshToken, cookieOptions);
 
+    // Clear any stale guest session cookie on full login
+    response.cookies.set('guestToken', '', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 0,
+      path: '/',
+    });
+
     return response;
   } catch (error) {
-    console.error('Login error:', error);
+    console.error('❌ Login error details:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name,
+    });
 
     if (error.message.includes('locked')) {
+      console.log('🔒 Account locked error');
       return NextResponse.json(
         { error: error.message },
         { status: 423 } // Locked

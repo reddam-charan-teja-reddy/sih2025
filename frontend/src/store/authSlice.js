@@ -1,7 +1,14 @@
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import {
+  createSlice,
+  createAsyncThunk,
+  createSelector,
+} from '@reduxjs/toolkit';
 
 // API base URL
 const API_BASE = '/api/auth';
+
+// Prevent multiple simultaneous refresh requests
+let refreshPromise = null;
 
 // Async thunks for authentication actions
 export const registerUser = createAsyncThunk(
@@ -81,23 +88,81 @@ export const loginAsGuest = createAsyncThunk(
 export const refreshToken = createAsyncThunk(
   'auth/refresh',
   async (_, { rejectWithValue }) => {
-    try {
-      const response = await fetch(`${API_BASE}/refresh`, {
-        method: 'POST',
-        credentials: 'include', // Include cookies
-      });
+    // If there's already a refresh in progress, wait for it
+    if (refreshPromise) {
+      try {
+        return await refreshPromise;
+      } catch (error) {
+        return rejectWithValue(error);
+      }
+    }
 
-      const data = await response.json();
+    // Create a new refresh promise
+    refreshPromise = (async () => {
+      let lastError = null;
 
-      if (!response.ok) {
-        return rejectWithValue(data);
+      // Retry up to 3 times for network errors
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          const response = await fetch(`${API_BASE}/refresh`, {
+            method: 'POST',
+            credentials: 'include', // Include cookies
+          });
+
+          const data = await response.json();
+
+          if (!response.ok) {
+            // If it's an auth error (401/403), don't retry
+            if (response.status === 401 || response.status === 403) {
+              throw data;
+            }
+
+            // If it's a 409 (conflict/concurrent refresh), don't retry immediately
+            if (response.status === 409) {
+              // Wait a short time and try once more
+              if (attempt < 3) {
+                await new Promise((resolve) => setTimeout(resolve, 500));
+                lastError = data;
+                continue;
+              }
+              throw data;
+            }
+
+            // For other errors, try again
+            lastError = data;
+            if (attempt === 3) {
+              throw data;
+            }
+            continue;
+          }
+
+          return data;
+        } catch (error) {
+          lastError = { error: 'Network error. Please try again.' };
+
+          // For network errors, retry unless it's the last attempt
+          if (attempt === 3) {
+            throw {
+              error: 'Session expired. Please log in again.',
+            };
+          }
+
+          // Wait a bit before retrying
+          await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
+        }
       }
 
-      return data;
+      throw lastError;
+    })();
+
+    try {
+      const result = await refreshPromise;
+      return result;
     } catch (error) {
-      return rejectWithValue({
-        error: 'Session expired. Please log in again.',
-      });
+      return rejectWithValue(error);
+    } finally {
+      // Clear the promise when done (success or failure)
+      refreshPromise = null;
     }
   }
 );
@@ -181,14 +246,17 @@ export const resetPassword = createAsyncThunk(
 
 export const verifyAccount = createAsyncThunk(
   'auth/verify',
-  async (token, { rejectWithValue }) => {
+  async (code, { rejectWithValue }) => {
     try {
       const response = await fetch(`${API_BASE}/verify`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ token }),
+        body: JSON.stringify({
+          code: code,
+          token: code, // Send both for backward compatibility
+        }),
       });
 
       const data = await response.json();
@@ -496,11 +564,20 @@ export const selectRequiresVerification = (state) =>
   state.auth.requiresVerification;
 export const selectRequiresOfficialVerification = (state) =>
   state.auth.requiresOfficialVerification;
-export const selectGuestSession = (state) => ({
-  isGuest: state.auth.isGuest,
-  expiresAt: state.auth.guestExpiresAt,
-  limitations: state.auth.guestLimitations,
-});
+
+// Memoized selector to prevent unnecessary re-renders
+export const selectGuestSession = createSelector(
+  [
+    (state) => state.auth.isGuest,
+    (state) => state.auth.guestExpiresAt,
+    (state) => state.auth.guestLimitations,
+  ],
+  (isGuest, expiresAt, limitations) => ({
+    isGuest,
+    expiresAt,
+    limitations,
+  })
+);
 
 // Export reducer
 export default authSlice.reducer;

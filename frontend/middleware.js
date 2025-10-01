@@ -30,10 +30,19 @@ export function middleware(request) {
     '/api/auth/refresh',
   ];
 
-  // Guest-allowed routes (limited access)
-  const guestAllowedRoutes = ['/', '/dashboard', '/reports', '/map', '/alerts'];
+  // Guest-allowed routes (now mirror citizen routes)
+  const guestAllowedRoutes = [
+    '/',
+    '/dashboard',
+    '/reports',
+    '/map',
+    '/alerts',
+    '/profile',
+    '/settings',
+    '/submit-report',
+  ];
 
-  // Routes that require full authentication (no guest access)
+  // Routes that require authentication (guest or full)
   const authRequiredRoutes = [
     '/profile',
     '/settings',
@@ -71,12 +80,7 @@ export function middleware(request) {
     (route) => pathname === route || pathname.startsWith(route + '/')
   );
 
-  if (isGuest && isAuthRequired) {
-    const loginUrl = new URL('/auth/login', request.url);
-    loginUrl.searchParams.set('reason', 'guest_limitation');
-    loginUrl.searchParams.set('redirect', pathname);
-    return NextResponse.redirect(loginUrl);
-  }
+  // Guests are now allowed on auth-required routes
 
   // Check guest access to allowed routes
   const isGuestAllowed = guestAllowedRoutes.some(

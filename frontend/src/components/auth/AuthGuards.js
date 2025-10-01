@@ -25,18 +25,60 @@ const useAuthInitialization = () => {
   useEffect(() => {
     const initializeAuth = async () => {
       try {
+        console.log('🔄 Initializing authentication...', {
+          hasUser: !!user,
+          hasAccessToken: !!accessToken,
+          isAuthenticated,
+          isGuest,
+        });
+
         // If we have a user but no access token, try to refresh
         if (user && !accessToken && !isGuest) {
-          console.log('User found but no access token, attempting refresh...');
+          console.log(
+            '🔑 User found but no access token, attempting refresh...'
+          );
           const result = await dispatch(refreshToken()).unwrap();
-          console.log('Token refresh successful:', !!result.accessToken);
+          console.log('✅ Token refresh successful');
+        } else if (!user && !isGuest && !accessToken) {
+          // No user data at all, try silent refresh in case there's a valid refresh token
+          console.log('🔄 No user data, attempting silent refresh...');
+          try {
+            const result = await dispatch(refreshToken()).unwrap();
+            console.log('✅ Silent refresh successful');
+          } catch (silentError) {
+            console.log(
+              'ℹ️ Silent refresh failed (expected if no valid session)'
+            );
+            // Silent failure is expected if no valid session exists
+          }
+        } else {
+          console.log('ℹ️ Auth state is valid, no refresh needed');
         }
       } catch (error) {
-        console.log('Token refresh failed, clearing auth state:', error);
-        // If refresh fails, clear the persisted user state
-        dispatch(clearAuth());
+        console.error('❌ Token refresh failed:', error);
+
+        // Log the specific error for debugging
+        if (error.error) {
+          console.error('Refresh error details:', error.error);
+        }
+
+        // Only clear auth if it's a real authentication failure
+        // Don't clear on network errors or temporary issues
+        if (
+          error.error === 'Refresh token not found' ||
+          error.error === 'Invalid refresh token' ||
+          error.error === 'Account verification required' ||
+          error.error === 'User not found'
+        ) {
+          console.log('🧹 Authentication failure, clearing auth state');
+          dispatch(clearAuth());
+        } else {
+          console.log('⚠️ Temporary refresh failure, keeping user logged in');
+          // Just mark as not initializing but keep user state
+        }
       } finally {
         setIsInitializing(false);
+        console.log('✅ Auth initialization complete');
       }
     };
 
@@ -150,7 +192,8 @@ export const useAuth = () => {
   const canPerformAction = (action) => {
     // Define action permissions
     const permissions = {
-      submit_report: isAuthenticated && !isGuest,
+      // Treat guests like citizens for these actions
+      submit_report: (isAuthenticated && !isGuest) || isGuest,
       verify_report:
         isAuthenticated &&
         user?.role === 'official' &&
@@ -160,7 +203,7 @@ export const useAuth = () => {
         user?.role === 'official' &&
         user?.isOfficialVerified,
       view_reports: isAuthenticated || isGuest,
-      save_preferences: isAuthenticated && !isGuest,
+      save_preferences: (isAuthenticated && !isGuest) || isGuest,
       access_admin:
         isAuthenticated &&
         user?.role === 'official' &&
@@ -319,7 +362,7 @@ export const GuestLimitationBanner = () => {
         </div>
         <div className='flex items-center space-x-2'>
           <span className='text-orange-600 dark:text-orange-300 text-xs'>
-            Limited access • Read-only
+            Core features enabled • Session-limited
           </span>
           <button
             onClick={() => router.push('/auth/login')}

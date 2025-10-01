@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
 import Report from '@/models/Report';
-import { authMiddleware } from '@/lib/auth';
+import { authMiddleware, guestMiddleware } from '@/lib/auth';
 import { generalAPIRateLimit } from '@/lib/rateLimit';
 import { validateFile, generateSignedUploadUrl } from '@/lib/storage';
 
@@ -26,22 +26,42 @@ export async function POST(request) {
 
     await connectDB();
 
-    // Verify authentication
-    const authResult = await authMiddleware(request);
-    if (!authResult.success) {
+    // Verify authentication or guest session
+    const guestAuth = await guestMiddleware(request);
+    if (guestAuth.error) {
       return NextResponse.json(
-        { error: authResult.error },
-        { status: authResult.status }
+        { error: guestAuth.error },
+        { status: guestAuth.status }
       );
     }
 
-    const { user } = authResult;
-
-    // Check if user can submit reports (no guest mode)
-    if (user.isGuest) {
+    // Build a unified user-like object
+    // If authenticated user present, prefer it; otherwise use guest payload
+    let user;
+    if (guestAuth.success) {
+      user = {
+        id: guestAuth.user._id || guestAuth.user.id,
+        fullName: guestAuth.user.fullName,
+        email: guestAuth.user.email,
+        phone: guestAuth.user.phone,
+        role: guestAuth.user.role,
+        isGuest: false,
+      };
+    } else if (guestAuth.isGuest) {
+      const anonId = guestAuth.guestData?.jti || 'guest';
+      user = {
+        id: null,
+        fullName: 'Guest User',
+        email: '',
+        phone: '',
+        role: 'citizen',
+        isGuest: true,
+        guestId: anonId,
+      };
+    } else {
       return NextResponse.json(
-        { error: 'Guest users cannot submit reports. Please sign in.' },
-        { status: 403 }
+        { error: 'Authentication required' },
+        { status: 401 }
       );
     }
 
@@ -58,6 +78,7 @@ export async function POST(request) {
       emergencyContact,
       images = [],
       videos = [],
+      audio = [],
       tags = [],
     } = body;
 
@@ -107,10 +128,10 @@ export async function POST(request) {
       },
       address: address?.trim(),
       landmark: landmark?.trim(),
-      reportedBy: user.id,
-      reporterName: user.fullName,
-      reporterPhone: user.phone,
-      reporterEmail: user.email,
+      reportedBy: user.isGuest ? undefined : user.id,
+      reporterName: user.fullName || 'Guest User',
+      reporterPhone: user.phone || undefined,
+      reporterEmail: user.email || undefined,
       peopleAtRisk: Boolean(peopleAtRisk),
       emergencyContact: emergencyContact || {},
       images: images.map((img) => ({
@@ -124,6 +145,13 @@ export async function POST(request) {
         fileName: vid.fileName,
         duration: vid.duration,
         caption: vid.caption?.trim(),
+        uploadedAt: new Date(),
+      })),
+      audio: audio.map((a) => ({
+        url: a.url,
+        fileName: a.fileName,
+        duration: a.duration,
+        transcript: a.transcript?.trim(),
         uploadedAt: new Date(),
       })),
       tags: tags
@@ -153,7 +181,7 @@ export async function POST(request) {
 
     // Add initial update
     await report.addUpdate({
-      updatedBy: user.id,
+      updatedBy: user.isGuest ? undefined : user.id,
       updateType: 'status_change',
       message: 'Report submitted successfully and is pending verification.',
       isPublic: true,

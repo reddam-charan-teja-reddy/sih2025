@@ -36,20 +36,21 @@ export default function VerifyPage() {
   const { loading, error, message, requiresVerification, verificationUserId } =
     useAppSelector(selectAuth);
 
-  const [verificationToken, setVerificationToken] = useState('');
+  const [verificationCode, setVerificationCode] = useState('');
   const [userId, setUserId] = useState('');
-  const [tokenError, setTokenError] = useState('');
+  const [codeError, setCodeError] = useState('');
   const [resendCooldown, setResendCooldown] = useState(0);
   const [isVerified, setIsVerified] = useState(false);
 
-  // Get token and userId from URL params
+  // Get token and userId from URL params (maintain backward compatibility)
   useEffect(() => {
     const token = searchParams.get('token');
     const userIdParam = searchParams.get('userId');
 
+    // If there's a token in URL (old system), still support it
     if (token) {
-      setVerificationToken(token);
-      // Auto-verify if token is in URL
+      setVerificationCode(token);
+      // Auto-verify if token is in URL (backward compatibility)
       dispatch(verifyAccount(token));
     }
 
@@ -86,21 +87,36 @@ export default function VerifyPage() {
     }
   }, [resendCooldown]);
 
-  const validateToken = () => {
-    if (!verificationToken.trim()) {
-      setTokenError('Verification token is required');
+  const validateCode = () => {
+    if (!verificationCode.trim()) {
+      setCodeError('Verification code is required');
       return false;
     }
-    setTokenError('');
+
+    const code = verificationCode.trim();
+
+    // Accept either 6-digit codes or hex tokens (64 characters)
+    if (code.length === 6 && !/^\d{6}$/.test(code)) {
+      setCodeError('Please enter a valid 6-digit verification code');
+      return false;
+    } else if (code.length === 64 && !/^[a-f0-9]{64}$/.test(code)) {
+      setCodeError('Please enter a valid verification token');
+      return false;
+    } else if (code.length !== 6 && code.length !== 64) {
+      setCodeError('Please enter a valid 6-digit code or verification token');
+      return false;
+    }
+
+    setCodeError('');
     return true;
   };
 
   const handleVerify = (e) => {
     e.preventDefault();
 
-    if (!validateToken()) return;
+    if (!validateCode()) return;
 
-    dispatch(verifyAccount(verificationToken.trim()));
+    dispatch(verifyAccount(verificationCode.trim()));
   };
 
   const handleResendVerification = () => {
@@ -112,10 +128,17 @@ export default function VerifyPage() {
     setResendCooldown(60); // 60 second cooldown
   };
 
-  const handleTokenChange = (e) => {
-    setVerificationToken(e.target.value);
-    if (tokenError) {
-      setTokenError('');
+  const handleCodeChange = (e) => {
+    let value = e.target.value;
+
+    // Accept any alphanumeric characters for backward compatibility with old hex tokens
+    // Remove any non-alphanumeric characters
+    value = value.replace(/[^a-zA-Z0-9]/g, '');
+
+    setVerificationCode(value);
+
+    if (codeError) {
+      setCodeError('');
     }
   };
 
@@ -190,7 +213,7 @@ export default function VerifyPage() {
                 Verify Your Account
               </CardTitle>
               <CardDescription>
-                Enter the verification code sent to your email or phone
+                Enter the 6-digit verification code sent to your email
               </CardDescription>
             </CardHeader>
 
@@ -239,18 +262,8 @@ export default function VerifyPage() {
                       Check your email
                     </p>
                     <p className='text-xs text-blue-600 dark:text-blue-400'>
-                      We sent a verification code to your email address
-                    </p>
-                  </div>
-                </div>
-                <div className='flex items-start space-x-3'>
-                  <MessageSquare className='h-5 w-5 text-blue-600 mt-0.5' />
-                  <div className='space-y-1'>
-                    <p className='text-sm font-medium text-blue-800 dark:text-blue-300'>
-                      Check your phone
-                    </p>
-                    <p className='text-xs text-blue-600 dark:text-blue-400'>
-                      You might also receive an SMS with the code
+                      We sent a 6-digit verification code to your email address.
+                      You can copy it directly from the email.
                     </p>
                   </div>
                 </div>
@@ -259,24 +272,27 @@ export default function VerifyPage() {
               {/* Verification Form */}
               <form onSubmit={handleVerify} className='space-y-4'>
                 <div className='space-y-2'>
-                  <Label htmlFor='token'>Verification Code</Label>
+                  <Label htmlFor='code'>Verification Code</Label>
                   <Input
-                    id='token'
+                    id='code'
                     type='text'
-                    placeholder='Enter your verification code'
-                    value={verificationToken}
-                    onChange={handleTokenChange}
-                    className={`text-center text-lg tracking-widest ${
-                      tokenError ? 'border-red-500' : ''
-                    }`}
+                    placeholder='Enter 6-digit code or verification token'
+                    value={verificationCode}
+                    onChange={handleCodeChange}
+                    className={`text-center ${
+                      verificationCode.length === 6
+                        ? 'text-2xl tracking-[0.5em] font-mono'
+                        : 'text-sm tracking-wide font-mono'
+                    } ${codeError ? 'border-red-500' : ''}`}
                     maxLength={64}
                     autoComplete='one-time-code'
                   />
-                  {tokenError && (
-                    <p className='text-sm text-red-600'>{tokenError}</p>
+                  {codeError && (
+                    <p className='text-sm text-red-600'>{codeError}</p>
                   )}
                   <p className='text-xs text-gray-500 text-center'>
-                    Enter the code exactly as received (case-sensitive)
+                    Enter the 6-digit code from your email or the full
+                    verification token
                   </p>
                 </div>
 

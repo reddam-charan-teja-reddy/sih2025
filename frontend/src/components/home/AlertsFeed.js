@@ -283,9 +283,10 @@ export function AlertsFeed() {
   }
 
   return (
-    <div className='flex flex-col bg-gray-200 h-full w-full relative'>
-      <Tabs defaultValue='local' className='flex flex-col flex-grow p-4'>
-        <div className='flex items-center justify-between mb-2'>
+    <div className='h-full w-full flex flex-col bg-background'>
+      <Tabs defaultValue='local' className='h-full flex flex-col'>
+        {/* Tab Header - Fixed */}
+        <div className='flex items-center justify-between p-4 pb-2 flex-shrink-0'>
           <TabsList className='grid w-full grid-cols-3'>
             <TabsTrigger value='local' className='text-xs'>
               Local ({allLocalItems.length})
@@ -307,8 +308,9 @@ export function AlertsFeed() {
           </Button>
         </div>
 
-        <div className='flex-grow bg-gray-200 overflow-y-auto pr-2'>
-          <TabsContent value='local' className='mt-2'>
+        {/* Tab Content - Scrollable */}
+        <div className='flex-1 min-h-0 px-4 pb-4'>
+          <TabsContent value='local' className='h-full overflow-y-auto'>
             {allLocalItems.length === 0 ? (
               <Card className='p-4 text-center'>
                 <CardContent>
@@ -321,18 +323,20 @@ export function AlertsFeed() {
                 </CardContent>
               </Card>
             ) : (
-              allLocalItems.map((item) => (
-                <AlertCard
-                  key={`${item.type}-${item.id || item._id}`}
-                  item={item}
-                  userPosition={userPosition}
-                  onClick={setSelectedItem}
-                />
-              ))
+              <div className='space-y-4 pb-4'>
+                {allLocalItems.map((item) => (
+                  <AlertCard
+                    key={`${item.type}-${item.id || item._id}`}
+                    item={item}
+                    userPosition={userPosition}
+                    onClick={setSelectedItem}
+                  />
+                ))}
+              </div>
             )}
           </TabsContent>
 
-          <TabsContent value='verified' className='mt-2'>
+          <TabsContent value='verified' className='h-full overflow-y-auto'>
             {verifiedItems.length === 0 ? (
               <Card className='p-4 text-center'>
                 <CardContent>
@@ -342,19 +346,21 @@ export function AlertsFeed() {
                 </CardContent>
               </Card>
             ) : (
-              verifiedItems.map((item) => (
-                <AlertCard
-                  key={`${item.type}-${item.id || item._id}`}
-                  item={item}
-                  userPosition={userPosition}
-                  onClick={setSelectedItem}
-                />
-              ))
+              <div className='space-y-4 pb-4'>
+                {verifiedItems.map((item) => (
+                  <AlertCard
+                    key={`${item.type}-${item.id || item._id}`}
+                    item={item}
+                    userPosition={userPosition}
+                    onClick={setSelectedItem}
+                  />
+                ))}
+              </div>
             )}
           </TabsContent>
 
-          <TabsContent value='unverified' className='mt-2'>
-            <div className='text-center p-3 text-sm text-orange-600 bg-orange-50 rounded-md mb-4 border border-orange-200'>
+          <TabsContent value='unverified' className='h-full overflow-y-auto'>
+            <div className='sticky top-0 bg-background z-10 text-center p-3 text-sm text-orange-600 bg-orange-50 rounded-md mb-4 border border-orange-200'>
               ⚠️ These are unconfirmed reports. Please exercise caution and
               verify independently.
             </div>
@@ -367,20 +373,23 @@ export function AlertsFeed() {
                 </CardContent>
               </Card>
             ) : (
-              unverifiedReports.map((item) => (
-                <AlertCard
-                  key={`${item.type}-${item.id || item._id}`}
-                  item={item}
-                  userPosition={userPosition}
-                  onClick={setSelectedItem}
-                />
-              ))
+              <div className='space-y-4 pb-4'>
+                {unverifiedReports.map((item) => (
+                  <AlertCard
+                    key={`${item.type}-${item.id || item._id}`}
+                    item={item}
+                    userPosition={userPosition}
+                    onClick={setSelectedItem}
+                  />
+                ))}
+              </div>
             )}
           </TabsContent>
         </div>
       </Tabs>
 
-      <div className='absolute bottom-6 right-6'>
+      {/* Floating Report Button */}
+      <div className='absolute bottom-4 right-4 z-20'>
         <ReportModal />
       </div>
     </div>

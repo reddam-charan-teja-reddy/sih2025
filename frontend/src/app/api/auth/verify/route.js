@@ -21,29 +21,40 @@ export async function POST(request) {
     }
 
     const body = await request.json();
-    const token = sanitizeInput(body.token);
+    const code = sanitizeInput(body.code || body.token); // Support both 'code' and 'token' for backward compatibility
 
-    if (!token) {
+    if (!code) {
       return NextResponse.json(
-        { error: 'Verification token is required' },
+        { error: 'Verification code is required' },
+        { status: 400 }
+      );
+    }
+
+    // Validate that it's a 6-digit code
+    if (!/^\d{6}$/.test(code)) {
+      return NextResponse.json(
+        {
+          error:
+            'Invalid verification code format. Please enter a 6-digit code.',
+        },
         { status: 400 }
       );
     }
 
     await connectDB();
 
-    // Hash the token to match stored hash
-    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+    // Hash the code to match stored hash
+    const hashedCode = crypto.createHash('sha256').update(code).digest('hex');
 
     // Find user with valid verification token
     const user = await User.findOne({
-      verificationToken: hashedToken,
+      verificationToken: hashedCode,
       verificationTokenExpires: { $gt: Date.now() },
     }).select('+verificationToken +verificationTokenExpires');
 
     if (!user) {
       return NextResponse.json(
-        { error: 'Invalid or expired verification token' },
+        { error: 'Invalid or expired verification code' },
         { status: 400 }
       );
     }

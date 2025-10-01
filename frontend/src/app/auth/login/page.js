@@ -8,6 +8,7 @@ import {
   loginUser,
   loginAsGuest,
   clearMessages,
+  clearAuth,
   selectAuth,
   setPasswordResetStep,
 } from '@/store/authSlice';
@@ -59,12 +60,16 @@ export default function LoginPage() {
   });
   const [formErrors, setFormErrors] = useState({});
 
-  // Redirect if already authenticated
+  // Redirect if already authenticated (but allow guests to access login)
   useEffect(() => {
-    if (isAuthenticated || isGuest) {
+    if (isAuthenticated && !isGuest) {
       router.push('/');
     }
-  }, [isAuthenticated, isGuest, router]);
+    // If user is a guest and accessing login, clear guest state
+    if (isGuest) {
+      dispatch(clearAuth());
+    }
+  }, [isAuthenticated, isGuest, router, dispatch]);
 
   // Clear messages when component mounts
   useEffect(() => {

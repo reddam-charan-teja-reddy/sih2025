@@ -4,21 +4,76 @@ import crypto from 'crypto';
 // Initialize Google Cloud Storage with Application Default Credentials support
 let storage, bucket;
 
+/**
+ * Check if Google Cloud Storage is properly configured
+ * @returns {boolean} True if storage is configured
+ */
+const isStorageConfigured = () => {
+  const isConfigured = !!(
+    storage &&
+    bucket &&
+    process.env.GOOGLE_CLOUD_BUCKET_NAME
+  );
+  console.log('🔍 Storage configuration check:', {
+    hasStorage: !!storage,
+    hasBucket: !!bucket,
+    bucketName: process.env.GOOGLE_CLOUD_BUCKET_NAME || 'not set',
+    isConfigured,
+  });
+  return isConfigured;
+};
+
 try {
-  storage = new Storage({
-    // Uses Application Default Credentials in production (Cloud Run, GKE, etc.)
-    // Falls back to service account key file in development
-    ...(process.env.GOOGLE_CLOUD_KEYFILE && {
-      keyFilename: process.env.GOOGLE_CLOUD_KEYFILE,
-    }),
-    ...(process.env.GOOGLE_CLOUD_PROJECT_ID && {
-      projectId: process.env.GOOGLE_CLOUD_PROJECT_ID,
-    }),
+  // Build Storage options that support either a file path or raw JSON in env
+  const storageOptions = {};
+
+  const keyEnv =
+    process.env.GOOGLE_CLOUD_KEYFILE ||
+    process.env.GOOGLE_APPLICATION_CREDENTIALS;
+  if (keyEnv) {
+    // If the env contains JSON, parse it and use credentials; otherwise treat it as a path
+    const isJsonLike = keyEnv.trim().startsWith('{');
+    if (isJsonLike) {
+      try {
+        const keyObj = JSON.parse(keyEnv);
+        const private_key = (keyObj.private_key || '').replace(/\\n/g, '\n');
+        storageOptions.projectId =
+          process.env.GOOGLE_CLOUD_PROJECT_ID || keyObj.project_id;
+        storageOptions.credentials = {
+          client_email: keyObj.client_email,
+          private_key,
+        };
+      } catch (e) {
+        console.warn(
+          'Invalid JSON in GOOGLE_CLOUD_KEYFILE; falling back to ADC if available.'
+        );
+      }
+    } else {
+      storageOptions.keyFilename = keyEnv; // file path
+      if (process.env.GOOGLE_CLOUD_PROJECT_ID) {
+        storageOptions.projectId = process.env.GOOGLE_CLOUD_PROJECT_ID;
+      }
+    }
+  } else if (process.env.GOOGLE_CLOUD_PROJECT_ID) {
+    // Allow setting only projectId if relying on ADC on the machine
+    storageOptions.projectId = process.env.GOOGLE_CLOUD_PROJECT_ID;
+  }
+
+  storage = new Storage(storageOptions);
+  console.log('⚙️ GCS Storage initialized with options:', {
+    hasProjectId: !!storageOptions.projectId,
+    hasCredentials: !!storageOptions.credentials,
+    hasKeyFilename: !!storageOptions.keyFilename,
+    projectId: storageOptions.projectId || 'not set',
   });
 
   // Only initialize bucket if bucket name is provided
   if (process.env.GOOGLE_CLOUD_BUCKET_NAME) {
     bucket = storage.bucket(process.env.GOOGLE_CLOUD_BUCKET_NAME);
+    console.log(
+      '📦 GCS Bucket initialized:',
+      process.env.GOOGLE_CLOUD_BUCKET_NAME
+    );
   } else if (process.env.NODE_ENV !== 'test') {
     console.warn(
       'GOOGLE_CLOUD_BUCKET_NAME not set. Storage functions will not work.'
@@ -82,6 +137,13 @@ export const validateFile = (contentType, size = null, options = {}) => {
       'video/avi',
       'video/quicktime',
       'video/x-msvideo',
+      // Audio
+      'audio/webm',
+      'audio/ogg',
+      'audio/mpeg',
+      'audio/mp4',
+      'audio/wav',
+      'audio/aac',
       // Documents
       'application/pdf',
       'text/plain',
@@ -142,14 +204,6 @@ export const validateFile = (contentType, size = null, options = {}) => {
 };
 
 /**
- * Check if storage is properly configured
- * @returns {boolean} True if storage is configured
- */
-const isStorageConfigured = () => {
-  return !!(storage && bucket && process.env.GOOGLE_CLOUD_BUCKET_NAME);
-};
-
-/**
  * Generate a signed URL for reading/downloading files from GCS (private bucket)
  * @param {string} fileName - Filename in GCS
  * @param {number} expiresIn - Expiration time in minutes (default: 60)
@@ -196,10 +250,17 @@ export const generateSignedUploadUrl = async (
   contentType,
   options = {}
 ) => {
+  console.log('🔐 generateSignedUploadUrl called with:', {
+    fileName,
+    contentType,
+    options: { ...options, metadata: 'present' },
+  });
+
   if (!isStorageConfigured()) {
-    throw new Error(
-      'Google Cloud Storage is not configured. Please set GOOGLE_CLOUD_BUCKET_NAME and ensure proper authentication.'
-    );
+    const error =
+      'Google Cloud Storage is not configured. Please set GOOGLE_CLOUD_BUCKET_NAME and ensure proper authentication.';
+    console.error('❌ Storage configuration error:', error);
+    throw new Error(error);
   }
 
   try {
@@ -209,10 +270,25 @@ export const generateSignedUploadUrl = async (
       reportId,
       category = 'files',
       metadata = {},
+      uploadTimestamp,
     } = options;
+
+    console.log('🔍 Upload options:', {
+      expiresIn,
+      userId,
+      reportId,
+      category,
+      metadataKeys: Object.keys(metadata),
+      hasUploadTimestamp: !!uploadTimestamp,
+    });
 
     // Validate file before generating upload URL
     const validation = validateFile(contentType);
+    console.log('✅ File validation in storage:', {
+      isValid: validation.isValid,
+      errors: validation.errors,
+    });
+
     if (!validation.isValid) {
       throw new Error(
         `File validation failed: ${validation.errors.join(', ')}`
@@ -226,36 +302,65 @@ export const generateSignedUploadUrl = async (
       category,
     });
 
+    console.log('📁 Generated unique filename:', {
+      original: fileName,
+      unique: uniqueFileName,
+    });
+
     const file = bucket.file(uniqueFileName);
+    console.log('📁 GCS file object created for:', uniqueFileName);
 
     // Configure upload options
+    const timestamp = uploadTimestamp || new Date().toISOString();
+    const extensionHeaders = {
+      'x-goog-meta-original-name': fileName,
+      'x-goog-meta-uploaded-at': timestamp,
+      'x-goog-meta-uploader-id': String(userId || 'anonymous'),
+      'x-goog-meta-report-id': reportId || '',
+      'x-goog-meta-filesize': String(metadata.fileSize || ''),
+      'x-goog-meta-category': String(metadata.category || ''),
+      'x-goog-meta-userrole': String(metadata.userRole || 'citizen'),
+    };
+
     const uploadOptions = {
       version: 'v4',
       action: 'write',
       expires: Date.now() + expiresIn * 60 * 1000, // Convert minutes to milliseconds
       contentType,
-      extensionHeaders: {
-        'x-goog-meta-original-name': fileName,
-        'x-goog-meta-uploaded-at': new Date().toISOString(),
-        'x-goog-meta-uploader-id': userId || 'anonymous',
-        'x-goog-meta-report-id': reportId || '',
-        ...Object.entries(metadata).reduce((acc, [key, value]) => {
-          acc[`x-goog-meta-${key}`] = String(value);
-          return acc;
-        }, {}),
-      },
+      extensionHeaders,
     };
 
+    console.log('🔐 Extension headers for signing:', extensionHeaders);
+
+    console.log('🔐 Upload options configured:', {
+      version: uploadOptions.version,
+      action: uploadOptions.action,
+      expiresIn: `${expiresIn} minutes`,
+      contentType: uploadOptions.contentType,
+      headersCount: Object.keys(uploadOptions.extensionHeaders).length,
+    });
+
     // Generate signed upload URL
+    console.log('🔐 Generating signed URL for file:', uniqueFileName);
     const [uploadUrl] = await file.getSignedUrl(uploadOptions);
+    console.log('✅ Signed upload URL generated successfully:', {
+      urlLength: uploadUrl.length,
+      urlPrefix: uploadUrl.substring(0, 50) + '...',
+    });
 
     // Generate a signed download URL that will be valid after upload (valid for 1 hour)
+    console.log('🔍 Generating signed download URL...');
     const downloadUrl = await generateSignedDownloadUrl(uniqueFileName, 60);
+    console.log('✅ Signed download URL generated successfully');
 
-    return {
+    const result = {
       uploadUrl,
       fileName: uniqueFileName,
       downloadUrl,
+      signedHeaders: {
+        'Content-Type': contentType,
+        ...extensionHeaders,
+      },
       metadata: {
         originalName: fileName,
         contentType,
@@ -265,6 +370,15 @@ export const generateSignedUploadUrl = async (
         ...metadata,
       },
     };
+
+    console.log('✅ generateSignedUploadUrl completed successfully:', {
+      hasUploadUrl: !!result.uploadUrl,
+      hasDownloadUrl: !!result.downloadUrl,
+      fileName: result.fileName,
+      signedHeadersCount: Object.keys(result.signedHeaders).length,
+    });
+
+    return result;
   } catch (error) {
     console.error('Error generating signed upload URL:', error);
     throw new Error(`Failed to generate upload URL: ${error.message}`);

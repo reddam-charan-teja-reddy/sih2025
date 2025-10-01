@@ -122,7 +122,7 @@ export const GuestModeManager = () => {
                     : 'text-blue-600 dark:text-blue-400'
                 }
               `}>
-                View-only access • Limited features
+                Core features enabled • Session-limited
               </div>
             </div>
           </div>
@@ -205,43 +205,5 @@ export const GuestModeManager = () => {
 };
 
 export const GuestLimitations = () => {
-  const isGuest = useAppSelector(selectIsGuest);
-
-  if (!isGuest) return null;
-
-  const limitations = [
-    'Cannot submit emergency reports',
-    'Cannot save favorite locations',
-    'Cannot receive personalized alerts',
-    'Cannot access emergency contacts',
-    'View-only access to incident data',
-    'Session expires after 10 minutes',
-  ];
-
-  return (
-    <div className='bg-gray-50 dark:bg-gray-900 rounded-lg p-4 border border-gray-200 dark:border-gray-700'>
-      <div className='flex items-start space-x-3'>
-        <AlertTriangle className='h-5 w-5 text-orange-500 mt-0.5 flex-shrink-0' />
-        <div>
-          <h3 className='font-semibold text-gray-900 dark:text-gray-100 mb-2'>
-            Guest Mode Limitations
-          </h3>
-          <ul className='text-sm text-gray-600 dark:text-gray-400 space-y-1'>
-            {limitations.map((limitation, index) => (
-              <li key={index} className='flex items-start'>
-                <span className='text-orange-500 mr-2'>•</span>
-                {limitation}
-              </li>
-            ))}
-          </ul>
-          <div className='mt-3 pt-3 border-t border-gray-200 dark:border-gray-700'>
-            <p className='text-sm text-gray-700 dark:text-gray-300'>
-              <strong>Create an account</strong> to unlock all features and help
-              make your community safer.
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+  return null;
 };

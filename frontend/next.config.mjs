@@ -13,6 +13,18 @@ const nextConfig = {
         pathname: '/**', // Allows any path within that hostname
       },
     ],
+    // Disable image optimization for external images to prevent 400 errors
+    unoptimized: false,
+    // Add error handling for failed optimizations
+    dangerouslyAllowSVG: true,
+    contentDispositionType: 'attachment',
+    contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
+  },
+  // Add logging for debugging
+  experimental: {
+    logging: {
+      level: 'verbose',
+    },
   },
 };
 export default nextConfig;

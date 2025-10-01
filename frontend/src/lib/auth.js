@@ -64,7 +64,9 @@ export const guestMiddleware = async (request) => {
 
     // Check if it's a guest token
     if (token.startsWith('guest_')) {
-      const guestData = jwt.verify(token, process.env.JWT_SECRET);
+      // Strip the guest_ prefix before verifying the JWT
+      const rawToken = token.replace(/^guest_/, '');
+      const guestData = jwt.verify(rawToken, process.env.JWT_SECRET);
       if (Date.now() > guestData.exp * 1000) {
         return { error: 'Guest session expired', status: 401 };
       }

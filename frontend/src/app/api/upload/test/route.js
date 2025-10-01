@@ -1,6 +1,129 @@
 import { NextResponse } from 'next/server';
 import { validateFile } from '@/lib/storage';
 import { verifyToken } from '@/lib/auth';
+import { Storage } from '@google-cloud/storage';
+
+// Add a GET method for simple GCS testing without authentication
+export async function GET() {
+  try {
+    console.log('🔍 Testing GCS configuration...');
+
+    // Check environment variables
+    const envCheck = {
+      GOOGLE_CLOUD_PROJECT_ID: !!process.env.GOOGLE_CLOUD_PROJECT_ID,
+      GOOGLE_CLOUD_BUCKET_NAME: !!process.env.GOOGLE_CLOUD_BUCKET_NAME,
+      GOOGLE_CLOUD_KEYFILE: !!process.env.GOOGLE_CLOUD_KEYFILE,
+      GOOGLE_APPLICATION_CREDENTIALS:
+        !!process.env.GOOGLE_APPLICATION_CREDENTIALS,
+      NODE_ENV: process.env.NODE_ENV,
+    };
+
+    console.log('📋 Environment variables check:', envCheck);
+
+    if (!process.env.GOOGLE_CLOUD_BUCKET_NAME) {
+      return NextResponse.json({
+        success: false,
+        error: 'GOOGLE_CLOUD_BUCKET_NAME is not set',
+        envCheck,
+      });
+    }
+
+    // Try to initialize Storage
+    const storageOptions = {};
+    const keyEnv =
+      process.env.GOOGLE_CLOUD_KEYFILE ||
+      process.env.GOOGLE_APPLICATION_CREDENTIALS;
+
+    if (keyEnv) {
+      const isJsonLike = keyEnv.trim().startsWith('{');
+      if (isJsonLike) {
+        try {
+          const keyObj = JSON.parse(keyEnv);
+          const private_key = (keyObj.private_key || '').replace(/\\n/g, '\n');
+          storageOptions.projectId =
+            process.env.GOOGLE_CLOUD_PROJECT_ID || keyObj.project_id;
+          storageOptions.credentials = {
+            client_email: keyObj.client_email,
+            private_key,
+          };
+        } catch (e) {
+          return NextResponse.json({
+            success: false,
+            error: 'Invalid JSON in GOOGLE_CLOUD_KEYFILE',
+            envCheck,
+          });
+        }
+      } else {
+        storageOptions.keyFilename = keyEnv;
+        if (process.env.GOOGLE_CLOUD_PROJECT_ID) {
+          storageOptions.projectId = process.env.GOOGLE_CLOUD_PROJECT_ID;
+        }
+      }
+    } else if (process.env.GOOGLE_CLOUD_PROJECT_ID) {
+      storageOptions.projectId = process.env.GOOGLE_CLOUD_PROJECT_ID;
+    }
+
+    console.log('⚙️ Storage options:', {
+      hasProjectId: !!storageOptions.projectId,
+      hasCredentials: !!storageOptions.credentials,
+      hasKeyFilename: !!storageOptions.keyFilename,
+      projectId: storageOptions.projectId,
+    });
+
+    const storage = new Storage(storageOptions);
+    const bucket = storage.bucket(process.env.GOOGLE_CLOUD_BUCKET_NAME);
+
+    // Test bucket access
+    console.log('🧪 Testing bucket access...');
+    const [exists] = await bucket.exists();
+    console.log('📦 Bucket exists:', exists);
+
+    if (!exists) {
+      return NextResponse.json({
+        success: false,
+        error: 'Bucket does not exist or no access',
+        bucketName: process.env.GOOGLE_CLOUD_BUCKET_NAME,
+        envCheck,
+      });
+    }
+
+    // Test listing files (just to verify permissions)
+    console.log('📁 Testing file listing...');
+    const [files] = await bucket.getFiles({ maxResults: 5 });
+    console.log('📄 Found files:', files.length);
+
+    // Test creating a signed URL for a test file
+    console.log('🔗 Testing signed URL generation...');
+    const testFile = bucket.file('test/test-file.txt');
+    const [uploadUrl] = await testFile.getSignedUrl({
+      version: 'v4',
+      action: 'write',
+      expires: Date.now() + 15 * 60 * 1000, // 15 minutes
+      contentType: 'text/plain',
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: 'GCS configuration is working',
+      bucketName: process.env.GOOGLE_CLOUD_BUCKET_NAME,
+      projectId: storageOptions.projectId,
+      filesCount: files.length,
+      hasSignedUrl: !!uploadUrl,
+      envCheck,
+    });
+  } catch (error) {
+    console.error('❌ GCS test error:', error);
+    return NextResponse.json(
+      {
+        success: false,
+        error: error.message,
+        code: error.code,
+        stack: error.stack,
+      },
+      { status: 500 }
+    );
+  }
+}
 
 export async function POST(request) {
   try {

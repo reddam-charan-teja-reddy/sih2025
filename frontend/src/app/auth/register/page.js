@@ -6,7 +6,12 @@ import Link from 'next/link';
 import PhoneInput from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { registerUser, clearMessages, selectAuth } from '@/store/authSlice';
+import {
+  registerUser,
+  clearMessages,
+  clearAuth,
+  selectAuth,
+} from '@/store/authSlice';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -142,12 +147,16 @@ export default function RegisterPage() {
   });
   const [formErrors, setFormErrors] = useState({});
 
-  // Redirect if already authenticated
+  // Redirect if already authenticated (but allow guests to access register)
   useEffect(() => {
-    if (isAuthenticated || isGuest) {
+    if (isAuthenticated && !isGuest) {
       router.push('/');
     }
-  }, [isAuthenticated, isGuest, router]);
+    // If user is a guest and accessing register, clear guest state
+    if (isGuest) {
+      dispatch(clearAuth());
+    }
+  }, [isAuthenticated, isGuest, router, dispatch]);
 
   // Clear messages when component mounts
   useEffect(() => {
@@ -178,9 +187,12 @@ export default function RegisterPage() {
       errors.email = 'Please enter a valid email address';
     }
 
-    // Phone validation
-    if (!formData.phone) {
-      errors.phone = 'Phone number is required';
+    // Phone validation (optional)
+    if (
+      formData.phone &&
+      !/^\+?[1-9]\d{1,14}$/.test(formData.phone.replace(/[\s\-\(\)]/g, ''))
+    ) {
+      errors.phone = 'Please enter a valid phone number';
     }
 
     // Password validation
@@ -328,7 +340,6 @@ export default function RegisterPage() {
     const basicFieldsValid =
       formData.fullName.trim() &&
       formData.email.trim() &&
-      formData.phone &&
       formData.password &&
       formData.confirmPassword &&
       acceptTerms;
@@ -453,10 +464,10 @@ export default function RegisterPage() {
 
                 {/* Phone Number */}
                 <div className='space-y-2'>
-                  <Label htmlFor='phone'>Phone Number *</Label>
+                  <Label htmlFor='phone'>Phone Number (Optional)</Label>
                   <PhoneInput
                     id='phone'
-                    placeholder='Enter your phone number'
+                    placeholder='Enter your phone number (optional)'
                     value={formData.phone}
                     onChange={handlePhoneChange}
                     defaultCountry='IN'
@@ -706,7 +717,10 @@ export default function RegisterPage() {
                         !/^\S+@\S+\.\S+$/.test(formData.email) && (
                           <li>Valid email required</li>
                         )}
-                      {!formData.phone && <li>Phone number required</li>}
+                      {formData.phone &&
+                        !/^\+?[1-9]\d{1,14}$/.test(
+                          formData.phone.replace(/[\s\-\(\)]/g, '')
+                        ) && <li>Valid phone number format required</li>}
                       {!formData.password && <li>Password required</li>}
                       {formData.password && formData.password.length < 8 && (
                         <li>Password too short</li>
