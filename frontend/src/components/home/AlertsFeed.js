@@ -11,7 +11,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import Image from 'next/image';
+import OptimizedImage from '@/components/ui/optimized-image';
 import { ReportModal } from './ReportModal';
 
 // Utility function to calculate distance
@@ -106,16 +106,13 @@ const AlertCard = ({ item, userPosition, onClick }) => {
       <CardContent className='pt-0'>
         <div className='flex items-start gap-3'>
           {item.images && item.images[0] && (
-            <div className='flex-shrink-0'>
-              <Image
+            <div className='flex-shrink-0 w-20 h-20 relative rounded-md overflow-hidden'>
+              <OptimizedImage
                 src={item.images[0].url || '/placeholder.jpg'}
                 alt={item.title}
-                width={80}
-                height={80}
-                className='rounded-md object-cover w-20 h-20'
-                onError={(e) => {
-                  e.target.src = '/placeholder.jpg';
-                }}
+                fill
+                className='object-cover'
+                sizes='(max-width: 768px) 80px, 80px'
               />
             </div>
           )}

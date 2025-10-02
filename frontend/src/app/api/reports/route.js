@@ -3,7 +3,11 @@ import connectDB from '@/lib/db';
 import Report from '@/models/Report';
 import { authMiddleware, guestMiddleware } from '@/lib/auth';
 import { generalAPIRateLimit } from '@/lib/rateLimit';
-import { validateFile, generateSignedUploadUrl } from '@/lib/storage';
+import {
+  validateFile,
+  generateSignedUploadUrl,
+  generateMediaUrls,
+} from '@/lib/storage';
 
 export async function POST(request) {
   try {
@@ -238,6 +242,11 @@ export async function GET(request) {
     // Build query
     const query = { isPublic: true };
 
+    // Add 3-day filter for recent data (performance optimization)
+    const threeDaysAgo = new Date();
+    threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+    query.createdAt = { $gte: threeDaysAgo };
+
     if (status) query.status = status;
     if (hazardType) query.hazardType = hazardType;
     if (severity) query.severity = severity;
@@ -274,10 +283,28 @@ export async function GET(request) {
 
     const total = await Report.countDocuments(query);
 
+    // Generate fresh signed URLs for media files on-demand
+    const reportsWithUrls = await Promise.all(
+      reports.map(async (report) => {
+        if (report.media && report.media.length > 0) {
+          try {
+            report.media = await generateMediaUrls(report.media);
+          } catch (error) {
+            console.error(
+              `❌ Failed to generate URLs for report ${report._id}:`,
+              error
+            );
+            // Keep original media array if URL generation fails
+          }
+        }
+        return report;
+      })
+    );
+
     const totalPages = Math.ceil(total / limit);
 
     return NextResponse.json({
-      reports,
+      reports: reportsWithUrls,
       pagination: {
         currentPage: page,
         totalPages,

@@ -32,7 +32,8 @@ import {
   Mic,
   StopCircle,
 } from 'lucide-react';
-import Image from 'next/image';
+import OptimizedImage from '@/components/ui/optimized-image';
+import { debounce, logError } from '@/lib/performance';
 import { useAuth } from '@/components/auth/AuthGuards';
 import { useAppSelector } from '@/store/hooks';
 import { selectUser } from '@/store/authSlice';
@@ -568,27 +569,21 @@ export function ReportModal() {
     requestLocationPermission();
   }, []);
 
-  // Ensure file input refs are ready
+  // Ensure file input refs are ready (only check once on mount)
   useEffect(() => {
-    const checkRefs = () => {
-      console.log('🔍 Checking file input refs:', {
-        fileInputRef: {
-          exists: !!fileInputRef.current,
-          type: fileInputRef.current?.type,
-          accept: fileInputRef.current?.accept,
-        },
-        videoInputRef: {
-          exists: !!videoInputRef.current,
-          type: videoInputRef.current?.type,
-          accept: videoInputRef.current?.accept,
-        },
-      });
-    };
+    if (process.env.NODE_ENV === 'development') {
+      const checkRefs = () => {
+        console.log('🔍 File input refs ready:', {
+          fileInputRef: !!fileInputRef.current,
+          videoInputRef: !!videoInputRef.current,
+        });
+      };
 
-    // Check refs after component mounts
-    const timer = setTimeout(checkRefs, 100);
-    return () => clearTimeout(timer);
-  }, [step]); // Re-check when step changes
+      // Check refs only once after component mounts
+      const timer = setTimeout(checkRefs, 100);
+      return () => clearTimeout(timer);
+    }
+  }, []); // Only run once on mount
 
   const getCurrentLocation = async () => {
     setGettingLocation(true);
@@ -1259,13 +1254,15 @@ export function ReportModal() {
                           className='w-full h-20 object-cover rounded border'
                         />
                       ) : (
-                        <Image
-                          src={preview.url}
-                          alt={`Preview ${index + 1}`}
-                          width={150}
-                          height={80}
-                          className='w-full h-20 object-cover rounded border'
-                        />
+                        <div className='relative w-full h-20 rounded border overflow-hidden'>
+                          <OptimizedImage
+                            src={preview.url}
+                            alt={`Preview ${index + 1}`}
+                            fill
+                            className='object-cover'
+                            sizes='(max-width: 768px) 150px, 150px'
+                          />
+                        </div>
                       )}
                       <Button
                         type='button'

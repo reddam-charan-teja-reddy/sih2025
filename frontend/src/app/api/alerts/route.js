@@ -3,6 +3,7 @@ import connectDB from '@/lib/db';
 import Alert from '@/models/Alert';
 import { verifyToken } from '@/lib/auth';
 import { rateLimit } from '@/lib/rateLimit';
+import { generateMediaUrls } from '@/lib/storage';
 
 // Rate limiting configuration
 const rateLimiter = rateLimit({
@@ -257,6 +258,11 @@ export async function GET(request) {
     // Build query
     const query = {};
 
+    // Add 3-day filter for recent data (performance optimization)
+    const threeDaysAgo = new Date();
+    threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+    query.issuedAt = { $gte: threeDaysAgo };
+
     if (onlyActive) {
       const now = new Date();
       query.status = 'active';
@@ -301,10 +307,28 @@ export async function GET(request) {
       Alert.countDocuments(query),
     ]);
 
+    // Generate fresh signed URLs for media files on-demand
+    const alertsWithUrls = await Promise.all(
+      alerts.map(async (alert) => {
+        if (alert.media && alert.media.length > 0) {
+          try {
+            alert.media = await generateMediaUrls(alert.media);
+          } catch (error) {
+            console.error(
+              `❌ Failed to generate URLs for alert ${alert._id}:`,
+              error
+            );
+            // Keep original media array if URL generation fails
+          }
+        }
+        return alert;
+      })
+    );
+
     const totalPages = Math.ceil(total / limit);
 
     return NextResponse.json({
-      alerts,
+      alerts: alertsWithUrls,
       pagination: {
         currentPage: page,
         totalPages,

@@ -5,6 +5,7 @@ import crypto from 'crypto';
 let storage, bucket;
 
 /**
+ * Check if G/**
  * Check if Google Cloud Storage is properly configured
  * @returns {boolean} True if storage is configured
  */
@@ -206,10 +207,10 @@ export const validateFile = (contentType, size = null, options = {}) => {
 /**
  * Generate a signed URL for reading/downloading files from GCS (private bucket)
  * @param {string} fileName - Filename in GCS
- * @param {number} expiresIn - Expiration time in minutes (default: 60)
+ * @param {number} expiresIn - Expiration time in minutes (default: 1440 = 24 hours)
  * @returns {Promise<string>} Signed download URL
  */
-export const generateSignedDownloadUrl = async (fileName, expiresIn = 60) => {
+export const generateSignedDownloadUrl = async (fileName, expiresIn = 1440) => {
   if (!isStorageConfigured()) {
     throw new Error(
       'Google Cloud Storage is not configured. Please set GOOGLE_CLOUD_BUCKET_NAME and ensure proper authentication.'
@@ -348,9 +349,9 @@ export const generateSignedUploadUrl = async (
       urlPrefix: uploadUrl.substring(0, 50) + '...',
     });
 
-    // Generate a signed download URL that will be valid after upload (valid for 1 hour)
+    // Generate a signed download URL that will be valid after upload (valid for 24 hours)
     console.log('🔍 Generating signed download URL...');
-    const downloadUrl = await generateSignedDownloadUrl(uniqueFileName, 60);
+    const downloadUrl = await generateSignedDownloadUrl(uniqueFileName);
     console.log('✅ Signed download URL generated successfully');
 
     const result = {
@@ -454,8 +455,8 @@ export const uploadFileServer = async (
       resumable: fileBuffer.length > 5 * 1024 * 1024, // Use resumable for files > 5MB
     });
 
-    // Generate signed download URL (valid for 1 hour)
-    const downloadUrl = await generateSignedDownloadUrl(uniqueFileName, 60);
+    // Generate signed download URL (valid for 24 hours)
+    const downloadUrl = await generateSignedDownloadUrl(uniqueFileName);
 
     return {
       fileName: uniqueFileName,
@@ -633,6 +634,53 @@ export const cleanupOldFiles = async (prefix = '', maxAge = 30) => {
   }
 };
 
+/**
+ * Generate signed URLs on-demand for media files in reports/alerts
+ * @param {Array} mediaItems - Array of media objects with fileName property
+ * @param {number} expiresIn - Expiration time in minutes (default: 1440 = 24 hours)
+ * @returns {Promise<Array>} Array of media objects with refreshed URLs
+ */
+export const generateMediaUrls = async (mediaItems = [], expiresIn = 1440) => {
+  if (!Array.isArray(mediaItems) || mediaItems.length === 0) {
+    return [];
+  }
+
+  try {
+    const urlPromises = mediaItems.map(async (item) => {
+      if (!item.fileName) {
+        console.warn('⚠️ Media item missing fileName:', item);
+        return item;
+      }
+
+      try {
+        const signedUrl = await generateSignedDownloadUrl(
+          item.fileName,
+          expiresIn
+        );
+        return {
+          ...item,
+          url: signedUrl,
+          generatedAt: new Date().toISOString(),
+        };
+      } catch (error) {
+        console.error(`❌ Failed to generate URL for ${item.fileName}:`, error);
+        return {
+          ...item,
+          url: null,
+          error: error.message,
+        };
+      }
+    });
+
+    const results = await Promise.all(urlPromises);
+    console.log(`✅ Generated ${results.length} media URLs`);
+    return results;
+  } catch (error) {
+    console.error('❌ Error generating media URLs:', error);
+    throw error;
+  }
+};
+
 // Export default for convenience
 export default {
   generateSignedUploadUrl,
@@ -644,5 +692,6 @@ export default {
   validateFile,
   generateMultipleDownloadUrls,
   cleanupOldFiles,
+  generateMediaUrls,
   isStorageConfigured,
 };
