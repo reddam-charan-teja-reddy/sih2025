@@ -1,0 +1,140 @@
+Authors reference
+
+no use of this for others
+
+This document describes the features and implementation strategy for the "Samudra Sahayak" Official's Dashboard and its integrated AI capabilities. The system is built on a tiered, location-based access control model so that officials see only the data within their jurisdiction while retaining the real-time, triage-first, map-centric UX described in the original plan. 
+
+
+
+1. Official's Dashboard: Feature Breakdown
+Layout (three-column, real-time command center)
+
+Center Pane (50%) — Live Operational Map
+
+Feature: Jurisdiction-Scoped / Live Interactive Map. The map displays real-time geospatial data and is scoped to the official's area of responsibility (e.g., district-level officials see their district; state-level officials see the entire state). The map will auto-center and zoom to the official’s jurisdiction on login. 
+
+
+
+User Experience: Officials can pan/zoom, click pins or hotspots for summary popups, and see report pins appear instantly as they are submitted.
+
+Implementation: Frontend using react-leaflet; persistent socket.io for new-report, report-status-updated, and hotspot-update events. Backend endpoint /api/map/initial-data provides initial state filtered by jurisdiction/access level. 
+
+
+
+ 
+
+
+
+Right Pane (25%) — Real-Time Triage & Action Feed
+
+Feature: Filtered Live Triage Feed (reverse-chronological). Only reports from within the official’s jurisdiction are shown. 
+
+
+
+User Experience: New report cards animate in with title, thumbnail, location, and AI-generated severity score. Officials can act immediately. 
+
+
+
+Implementation: Frontend component listens to role/room-specific socket.io events; backend broadcasts into role-specific rooms so officials only receive relevant events. 
+
+
+
+One-Click Verification: "Verify" and "Dismiss" buttons remove the card from triage and update the map marker color (e.g., orange → green). Buttons call a secure PUT endpoint (e.g., /api/reports/{report_id}/status), backend updates MongoDB, and broadcasts report-status-updated. 
+
+
+
+Left Pane (25%) — Navigation & Command Actions
+
+Real-Time Statistics: At-a-glance counters for "Unverified Reports", "Verified Incidents", "Active Alerts", etc., updated in real-time by listening to socket events. 
+
+
+
+Navigation Menu & Role-Based Access: Collapsible sidebar with links to "Dashboard", "Report Analytics", "Alert History", and "User Management" (visible only to Admins). Access to pages is restricted by role. 
+
+
+
+Push New Alert Tool (Scoped): Officials open a modal, compose a multilingual message, set severity, and draw a GeoJSON polygon with an embedded map tool. The drawn area is constrained to the official’s jurisdiction so alerts cannot be sent outside permitted boundaries. On "Send", the backend performs a geospatial query against the Users collection and dispatches push notifications (e.g., via FCM). Frontend may use react-leaflet-draw. 
+
+
+
+ 
+
+
+
+2. User Management & Tiered Access (Critical)
+
+Feature: Admin-only User & Jurisdiction Management. Admins create/manage user accounts and assign roles and jurisdictions (Role: Official / Admin; Jurisdiction Level: State/District; State; District). This drives the tiered access model that scopes map data, triage feed, and alert-drawing boundaries. 
+
+
+
+Implementation:
+
+Frontend: Admin form with dropdowns for role, state, district and fields for email/name.
+
+Backend: Secure API endpoint to create/update user documents with a jurisdiction field in MongoDB. All data-serving endpoints use the user's role/jurisdiction to filter returned results and to determine socket.io room membership. 
+
+
+
+3. AI Features: Architecture & Implementation
+
+(AI worker architecture and behavior remain as previously described; their outputs are filtered by access control rules before being presented to officials.) 
+
+
+
+ 
+
+
+
+Pattern
+
+AI capabilities are implemented as separate Python microservices (workers) that consume messages from a message queue (e.g., Google Cloud Pub/Sub). Workers update MongoDB and the main backend broadcasts updates via socket.io. 
+
+
+
+Voice Message Transcription
+
+Objective: Convert user voice reports to text for officials.
+
+Flow: Flutter app uploads audio to GCS → main backend creates report and publishes {reportId, audioGcsPath} to audio-transcription-queue → Audio worker (Cloud Run) downloads audio, calls Google Speech-to-Text (language hinting supported: en-IN, hi-IN, te-IN), and updates the report document (e.g., voiceTranscription field). Officials then see transcription in report details. 
+
+
+
+Automated Severity Scoring
+
+Objective: Analyze images/videos and assign severity (Low / Medium / High / Critical) to help prioritize.
+
+Flow: Media worker sends content to Google Cloud Vision API (Label Detection, Object Localization). A rule-based scoring maps labels to severity (examples: ["Person","Water","Flood"] → Critical). Worker updates severityScore in MongoDB; backend broadcasts the score to dashboard clients. 
+
+
+
+Social Media Analytics & Dynamic Hotspots
+
+Objective: Monitor public social media to detect early signs of hazards and identify clusters (hotspots) on the map.
+
+Architecture: Separate Social Media Worker (continuous ingestion + NLP analysis) and Hotspot Worker (periodic clustering).
+
+Flow:
+
+Social Media Worker ingests location-tagged posts (X.com API / tweepy), runs sentiment analysis and NER (Hugging Face / spaCy), and stores processed mentions in social_mentions.
+
+Hotspot Worker (runs e.g., every 60s) aggregates recent high-severity reports and negative-sentiment social mentions (e.g., last 15 minutes) and runs DBSCAN or grid-based clustering. If a cluster’s danger score passes a threshold, the worker emits hotspot-update to the dashboard to render pulsing circles. Hotspots and social mentions shown to officials are filtered by their jurisdiction. 
+
+
+
+ 
+
+
+
+4. Security & Data Access Rules
+
+All backend endpoints enforce role- and jurisdiction-based authorization. Socket.io broadcasts are targeted to role/jurisdiction-specific rooms so officials receive only permitted events. Admin-only endpoints (e.g., user/jurisdiction management) require elevated privileges. 
+
+
+
+5. Implementation Notes & Recommendations
+
+Use react-leaflet + react-leaflet-draw for interactive mapping and polygon drawing. Use socket.io rooms keyed by jurisdiction/role to scope real-time events. Backend in FastAPI with MongoDB (geospatial indexes) and Pub/Sub for worker queues. AI workers should run separately (Cloud Run) and use motor for async MongoDB updates. 
+
+
+
+Ensure the alert-drawing tool enforces jurisdiction boundaries client-side and server-side to prevent accidental cross-jurisdiction alerts

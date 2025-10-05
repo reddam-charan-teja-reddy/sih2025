@@ -1,0 +1,47 @@
+# Core Framework
+fastapi==0.118.0
+uvicorn[standard]==0.34.0
+python-multipart
+
+# Database
+motor==3.7.1
+pymongo==4.15.2
+
+# Authentication & Security
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+bcrypt==3.2.2
+python-dotenv==1.0.1
+
+# Email
+aiosmtplib==3.0.2
+email-validator==2.3.0
+
+# Google Cloud Storage
+google-cloud-storage==3.4.0
+google-auth==2.41.1
+
+# Gemini API
+google-generativeai
+
+# WebSocket for Real-time
+python-socketio==5.12.1
+
+# Validation
+pydantic==2.11.9
+pydantic[email]==2.11.9
+
+# Rate Limiting
+slowapi==0.1.9
+
+# Utils
+cryptography==46.0.2
+
+# Testing
+pytest==8.3.4
+pytest-asyncio==0.25.2
+httpx==0.28.1
+requests==2.32.3
+
+# Settings
+pydantic-settings==2.11.0

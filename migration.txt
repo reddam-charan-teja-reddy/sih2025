@@ -1,0 +1,80 @@
+Authors reference
+
+no use of this for others
+
+This document outlines the strategic plan for migrating the "Samudra Sahayak" application to a new technology stack and deploying it to a production environment.
+The migration will preserve all existing functionality, introduce robust offline capabilities, and incorporate a tiered, location-based access control system from the very beginning.
+
+1. Migration Plan
+Phase 1: Backend Migration to Python FastAPI (with Tiered Access)
+
+Objective: Recreate the existing Node.js API as a 1:1 functional mirror in Python using FastAPI, while establishing a foundational architecture for jurisdiction-based authorization.
+
+Technology:
+
+FastAPI (web framework)
+
+Motor (asynchronous MongoDB driver)
+
+bcrypt (password hashing), JWT (authentication)
+
+socket.io (real-time communication)
+
+Data Contracts:
+
+Strictly define and use Pydantic models for all API requests and responses (e.g., UserLoginRequest, ReportResponse) to enforce validation and generate automatic documentation.
+
+The User model for officials must include a jurisdiction field, e.g.:
+
+{ "level": "district", "state": "Andhra Pradesh", "district": "Krishna" }
+
+
+Process:
+
+Set up FastAPI project and connect to the existing MongoDB database (via Motor).
+
+
+Endpoint Re-implementation:
+
+Recreate all existing endpoints 
+For all data-fetching endpoints (e.g., GET /api/reports), apply jurisdiction-based filtering using geospatial queries to ensure officials only see data within their area of responsibility.
+
+Ensure existing features like password hashing, JWT flows, and "forgot password" are replicated exactly.
+
+Media Handling: Re-implement the logic for generating signed URLs for Google Cloud Storage.
+
+Real-Time Communication: Integrate socket.io to support real-time updates for the dashboard.
+
+Phase 2: Frontend Migration to Flutter
+
+Objective: Rebuild the user-facing application in Flutter, matching the current UI/UX pixel-perfectly, while introducing offline functionality and connecting to the jurisdiction-aware backend.
+
+Technology:
+
+Flutter
+
+http, provider (or bloc)
+
+sqflite (offline storage)
+
+connectivity_plus (network detection)
+
+workmanager (background sync)
+
+path_provider (local media storage)
+
+Process:
+
+Recreate all existing UI screens which should look exactly (Login, Register, Home, Report Form, etc.), ensuring parity with the current web app.
+
+Integrate with the new FastAPI backend, including role/jurisdiction-based authorization.
+
+Implement Offline Functionality:
+
+Queue new reports offline using sqflite and save media files locally with path_provider.
+
+Use connectivity_plus and workmanager to build a background synchronization service that uploads queued reports automatically once a network connection is restored.
+
+Add clear UI indicators for offline status and an “Outbox” screen to show pending uploads.
+
+Cache essential jurisdiction-based data (e.g., reports, alerts) for quick access during connectivity loss.
